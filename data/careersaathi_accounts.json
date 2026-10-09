@@ -1,0 +1,46 @@
+[
+  {
+    "id": "usr-1791434924997-rhigu",
+    "email": "student.test@campus.edu",
+    "password": "Password123!",
+    "name": "Ananya Sen",
+    "college": "IIT Delhi",
+    "branch": "Computer Science & Engineering",
+    "role": "student",
+    "createdAt": "2026-10-08T04:48:44.997Z",
+    "lastSignInAt": "2026-10-08T05:14:15.275Z"
+  },
+  {
+    "id": "usr-1791435967101-wtm4c",
+    "email": "teststudent@example.com",
+    "password": "Password123!",
+    "name": "Rahul Sharma",
+    "college": "IIT Bombay",
+    "branch": "Computer Science",
+    "role": "student",
+    "createdAt": "2026-10-08T05:06:07.101Z",
+    "lastSignInAt": "2026-10-08T05:14:10.258Z"
+  },
+  {
+    "id": "usr-1791436459183-wbd2l",
+    "email": "vikram.patel@bits.ac.in",
+    "password": "SecurePassword99!",
+    "name": "Vikram Patel",
+    "college": "BITS Pilani",
+    "branch": "Electrical & Electronics",
+    "role": "student",
+    "createdAt": "2026-10-08T05:14:19.183Z",
+    "lastSignInAt": "2026-10-08T05:14:29.090Z"
+  },
+  {
+    "id": "usr-1791436477238-b4km0",
+    "email": "priya.sharma@iitb.ac.in",
+    "password": "MySecretPassword1!",
+    "name": "Priya Sharma",
+    "college": "IIT Bombay",
+    "branch": "Data Science",
+    "role": "student",
+    "createdAt": "2026-10-08T05:14:37.238Z",
+    "lastSignInAt": "2026-10-08T05:14:46.312Z"
+  }
+]

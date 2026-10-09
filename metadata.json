@@ -1,0 +1,7 @@
+{
+  "name": "Career Saathi AI",
+  "description": "Persistent Personal Career Intelligence Platform for students and early-career professionals, integrating 9 functional pillars, deterministic analytics, and explainable AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

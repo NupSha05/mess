@@ -1,0 +1,226 @@
+{
+  "usr-1791434924997-rhigu": {
+    "id": "usr-1791434924997-rhigu",
+    "name": "Ananya Sen",
+    "email": "student.test@campus.edu",
+    "phone": "",
+    "college": "IIT Delhi",
+    "headline": "Computer Science & Engineering Student",
+    "about": "",
+    "careerStage": "Final Year Student",
+    "onboardingCompleted": true,
+    "linkedInUrl": "",
+    "githubUrl": "",
+    "portfolioUrl": "",
+    "education": {
+      "institution": "IIT Delhi",
+      "degree": "B.Tech",
+      "branch": "Computer Science & Engineering",
+      "degreeStatus": "pursuing",
+      "gradingSystem": "cgpa",
+      "totalSemesters": 8,
+      "termsCompleted": 6,
+      "currentSemester": 7,
+      "selfReportedCGPA": 9.15,
+      "verifiedCGPA": 9.15,
+      "terms": []
+    },
+    "preferences": {
+      "targetRoles": [
+        "Software Development Engineer",
+        "Full Stack Developer"
+      ],
+      "preferredLocations": [
+        "Bengaluru",
+        "Hyderabad",
+        "Remote"
+      ],
+      "minAcceptableCTC": "₹12,00,000",
+      "preferredWorkType": "Hybrid",
+      "willingToRelocate": true
+    },
+    "skills": [],
+    "projects": [],
+    "experiences": [],
+    "certifications": [],
+    "readinessScores": {
+      "academic": 85,
+      "profile": 80,
+      "skill": 78,
+      "opportunity": 82,
+      "interview": 75,
+      "overall": 80
+    },
+    "updated_at": "2026-10-08T04:48:45.011Z"
+  },
+  "usr-1791435967101-wtm4c": {
+    "id": "usr-1791435967101-wtm4c",
+    "name": "Rahul Sharma",
+    "email": "teststudent@example.com",
+    "phone": "",
+    "college": "IIT Bombay",
+    "headline": "Computer Science Student",
+    "about": "",
+    "careerStage": "Final Year Student",
+    "onboardingCompleted": true,
+    "linkedInUrl": "",
+    "githubUrl": "",
+    "portfolioUrl": "",
+    "education": {
+      "id": "edu-usr-1791435967101-wtm4c",
+      "institution": "IIT Bombay",
+      "degree": "B.Tech",
+      "branch": "Computer Science",
+      "startYear": 2022,
+      "expectedGraduationYear": 2026,
+      "degreeStatus": "pursuing",
+      "gradingSystem": "cgpa",
+      "totalSemesters": 8,
+      "termsCompleted": 6,
+      "currentSemester": 7,
+      "selfReportedCGPA": 8.5,
+      "verifiedCGPA": 8.5,
+      "terms": []
+    },
+    "preferences": {
+      "targetRoles": [
+        "Software Development Engineer",
+        "Full Stack Developer"
+      ],
+      "preferredLocations": [
+        "Bengaluru",
+        "Hyderabad",
+        "Remote"
+      ],
+      "minAcceptableCTC": "₹12,00,000",
+      "preferredWorkType": "Hybrid",
+      "willingToRelocate": true
+    },
+    "skills": [],
+    "projects": [],
+    "experiences": [],
+    "certifications": [],
+    "readinessScores": {
+      "academic": 85,
+      "profile": 80,
+      "skill": 78,
+      "opportunity": 82,
+      "interview": 75,
+      "overall": 80
+    }
+  },
+  "usr-1791436459183-wbd2l": {
+    "id": "usr-1791436459183-wbd2l",
+    "name": "Vikram Patel",
+    "email": "vikram.patel@bits.ac.in",
+    "phone": "",
+    "college": "BITS Pilani",
+    "headline": "Electrical & Electronics Student",
+    "about": "",
+    "careerStage": "Final Year Student",
+    "onboardingCompleted": true,
+    "linkedInUrl": "",
+    "githubUrl": "",
+    "portfolioUrl": "",
+    "education": {
+      "id": "edu-usr-1791436459183-wbd2l",
+      "institution": "BITS Pilani",
+      "degree": "B.Tech",
+      "branch": "Electrical & Electronics",
+      "startYear": 2022,
+      "expectedGraduationYear": 2026,
+      "degreeStatus": "pursuing",
+      "gradingSystem": "cgpa",
+      "totalSemesters": 8,
+      "termsCompleted": 6,
+      "currentSemester": 7,
+      "selfReportedCGPA": 8.5,
+      "verifiedCGPA": 8.5,
+      "terms": []
+    },
+    "preferences": {
+      "targetRoles": [
+        "Software Development Engineer",
+        "Full Stack Developer"
+      ],
+      "preferredLocations": [
+        "Bengaluru",
+        "Hyderabad",
+        "Remote"
+      ],
+      "minAcceptableCTC": "₹12,00,000",
+      "preferredWorkType": "Hybrid",
+      "willingToRelocate": true
+    },
+    "skills": [],
+    "projects": [],
+    "experiences": [],
+    "certifications": [],
+    "readinessScores": {
+      "academic": 85,
+      "profile": 80,
+      "skill": 78,
+      "opportunity": 82,
+      "interview": 75,
+      "overall": 80
+    }
+  },
+  "usr-1791436477238-b4km0": {
+    "id": "usr-1791436477238-b4km0",
+    "name": "Priya Sharma",
+    "email": "priya.sharma@iitb.ac.in",
+    "phone": "",
+    "college": "IIT Bombay",
+    "headline": "Data Science Student",
+    "about": "",
+    "careerStage": "Final Year Student",
+    "onboardingCompleted": true,
+    "linkedInUrl": "",
+    "githubUrl": "",
+    "portfolioUrl": "",
+    "education": {
+      "id": "edu-usr-1791436477238-b4km0",
+      "institution": "IIT Bombay",
+      "degree": "B.Tech",
+      "branch": "Data Science",
+      "startYear": 2022,
+      "expectedGraduationYear": 2026,
+      "degreeStatus": "pursuing",
+      "gradingSystem": "percentage",
+      "totalSemesters": 8,
+      "termsCompleted": 4,
+      "currentSemester": 7,
+      "selfReportedCGPA": 9.32,
+      "verifiedCGPA": 8.5,
+      "terms": [],
+      "percentageValue": 88.5
+    },
+    "preferences": {
+      "targetRoles": [
+        "Software Development Engineer",
+        "Full Stack Developer"
+      ],
+      "preferredLocations": [
+        "Bengaluru",
+        "Hyderabad",
+        "Remote"
+      ],
+      "minAcceptableCTC": "₹12,00,000",
+      "preferredWorkType": "Hybrid",
+      "willingToRelocate": true
+    },
+    "skills": [],
+    "projects": [],
+    "experiences": [],
+    "certifications": [],
+    "readinessScores": {
+      "academic": 85,
+      "profile": 80,
+      "skill": 78,
+      "opportunity": 82,
+      "interview": 75,
+      "overall": 80
+    },
+    "updated_at": "2026-10-08T05:14:41.985Z"
+  }
+}

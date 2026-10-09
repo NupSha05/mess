@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Career Saathi AI — Career Intelligence Platform</title>
+    <meta name="description" content="Persistent Personal Career Intelligence Platform for students and early-career professionals, integrating 9 functional pillars, deterministic analytics, and explainable AI." />
+    <meta property="og:title" content="Career Saathi AI — Career Intelligence Platform" />
+    <meta property="og:description" content="Persistent Personal Career Intelligence Platform for students and early-career professionals, integrating 9 functional pillars, deterministic analytics, and explainable AI." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Per AI Studio runtime constraints: HMR is disabled, ignore WebSocket errors
+      (function() {
+        if (typeof window !== 'undefined') {
+          var OrigWebSocket = window.WebSocket;
+          if (OrigWebSocket) {
+            function MockHmrWebSocket(url, protocols) {
+              if (
+                protocols === 'vite-hmr' ||
+                protocols === 'vite-ping' ||
+                (typeof url === 'string' && (url.includes('token=') || url.includes('/vite-') || url.includes('__vite')))
+              ) {
+                var target = new EventTarget();
+                target.readyState = 1; // OPEN
+                target.url = url;
+                target.protocol = protocols || '';
+                target.send = function() {};
+                target.close = function() {};
+                target.onopen = null;
+                target.onclose = null;
+                target.onerror = null;
+                target.onmessage = null;
+                setTimeout(function() {
+                  if (typeof target.onopen === 'function') target.onopen(new Event('open'));
+                  target.dispatchEvent(new Event('open'));
+                }, 0);
+                return target;
+              }
+              return new OrigWebSocket(url, protocols);
+            }
+            MockHmrWebSocket.prototype = OrigWebSocket.prototype;
+            MockHmrWebSocket.CONNECTING = 0;
+            MockHmrWebSocket.OPEN = 1;
+            MockHmrWebSocket.CLOSING = 2;
+            MockHmrWebSocket.CLOSED = 3;
+            window.WebSocket = MockHmrWebSocket;
+          }
+
+          window.addEventListener('error', function(e) {
+            if (e && (e.message?.includes('WebSocket') || e.message?.includes('createWebSocketModuleRunnerTransport') || e.filename?.includes('@vite/client'))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return true;
+            }
+          }, true);
+
+          window.addEventListener('unhandledrejection', function(e) {
+            var reason = e && (e.reason ? (e.reason.message || String(e.reason)) : '');
+            if (reason && (reason.includes('WebSocket') || reason.includes('createWebSocketModuleRunnerTransport'))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return true;
+            }
+          }, true);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

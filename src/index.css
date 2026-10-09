@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Light Theme Variables & Class Overrides */
+html.light, body.light, .app-theme-light {
+  color-scheme: light;
+}
+
+html.light body,
+.app-theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.app-theme-light .bg-slate-950 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.app-theme-light .bg-slate-900 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+.app-theme-light .bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app-theme-light .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: #e2e8f0 !important;
+}
+
+.app-theme-light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+.app-theme-light .bg-slate-800\/60,
+.app-theme-light .bg-slate-800\/70,
+.app-theme-light .bg-slate-800\/40,
+.app-theme-light .bg-slate-800\/90 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.app-theme-light .border-slate-800,
+.app-theme-light .border-slate-700,
+.app-theme-light .border-slate-800\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+.app-theme-light .text-white {
+  color: #0f172a !important;
+}
+
+.app-theme-light .text-slate-100,
+.app-theme-light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.app-theme-light .text-slate-300 {
+  color: #334155 !important;
+}
+
+.app-theme-light .text-slate-400 {
+  color: #64748b !important;
+}
+
+.app-theme-light .text-slate-500 {
+  color: #64748b !important;
+}
+
+.app-theme-light input,
+.app-theme-light select,
+.app-theme-light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Print Styles for PDF / Paper Export */
+@media print {
+  header,
+  nav,
+  footer,
+  .print\\:hidden,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #report-printable-dossier {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 1.5rem !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}
