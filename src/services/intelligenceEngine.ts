@@ -259,6 +259,72 @@ export function evaluateEligibility(profile: StudentProfile, jd: OpportunityJD):
 }
 
 // 3b. EXPLAINABLE ATS ALIGNMENT ENGINE (Requirement 8)
+const TECH_SYNONYMS: Record<string, string[]> = {
+  sql: ['postgresql', 'postgres', 'mysql', 'sqlite', 'oracle', 'sql server', 'mariadb', 'rdbms', 'relational databases'],
+  postgresql: ['sql', 'postgres', 'relational database', 'rdbms', 'databases'],
+  mysql: ['sql', 'relational database', 'rdbms', 'databases'],
+  mongodb: ['nosql', 'document db', 'database', 'databases'],
+  redis: ['caching', 'in-memory datastore', 'pub/sub', 'message broker', 'databases'],
+  python: ['django', 'flask', 'fastapi', 'pandas', 'numpy', 'scikit-learn', 'pytorch', 'python3'],
+  javascript: ['typescript', 'node.js', 'react', 'vanilla js'],
+  typescript: ['javascript', 'node.js', 'react', 'ts'],
+  react: ['react.js', 'next.js', 'frontend', 'spa', 'ui'],
+  'node.js': ['express', 'nestjs', 'backend', 'rest apis'],
+  docker: ['containerization', 'containers', 'devops', 'kubernetes'],
+  kubernetes: ['docker', 'k8s', 'container orchestration', 'cloud native'],
+  aws: ['cloud', 'amazon web services', 's3', 'ec2'],
+  gcp: ['cloud', 'google cloud'],
+  azure: ['cloud', 'microsoft azure'],
+  git: ['github', 'gitlab', 'version control', 'ci/cd'],
+  'data structures & algorithms': ['dsa', 'data structures', 'algorithms', 'problem solving', 'leetcode'],
+  dsa: ['data structures & algorithms', 'data structures', 'algorithms'],
+  'system design': ['microservices', 'distributed systems', 'scalability', 'architecture'],
+  microservices: ['system design', 'distributed systems', 'rest apis'],
+  'machine learning': ['ml', 'deep learning', 'pytorch', 'tensorflow', 'scikit-learn', 'ai'],
+};
+
+export function checkCandidateSkillMatch(profile: StudentProfile, targetSkill: string, cvText?: string) {
+  const q = targetSkill.toLowerCase().trim();
+  const synonyms = TECH_SYNONYMS[q] || [];
+  const text = (cvText || profile.resumeText || '').toLowerCase();
+
+  // 1. In profile.skills
+  const directSkill = (profile.skills || []).find((s) => {
+    const sName = s.name.toLowerCase().trim();
+    return sName === q || sName.includes(q) || q.includes(sName) || synonyms.some((syn) => sName === syn || sName.includes(syn));
+  });
+  if (directSkill) {
+    return { matched: true, evidenceLevel: directSkill.evidenceLevel || 2, source: 'skill' };
+  }
+
+  // 2. In experiences (internships)
+  const expMatch = (profile.experiences || []).find((e) => {
+    const skills = (e.skillsUsed || []).map((s) => s.toLowerCase());
+    const desc = (e.description || '').toLowerCase();
+    return skills.some((s) => s === q || s.includes(q) || q.includes(s) || synonyms.includes(s)) || desc.includes(q) || synonyms.some((syn) => desc.includes(syn));
+  });
+  if (expMatch) {
+    return { matched: true, evidenceLevel: 3, source: 'experience' };
+  }
+
+  // 3. In projects
+  const projMatch = (profile.projects || []).find((p) => {
+    const stack = (p.techStack || []).map((s) => s.toLowerCase());
+    const desc = (p.description || '').toLowerCase();
+    return stack.some((s) => s === q || s.includes(q) || q.includes(s) || synonyms.includes(s)) || desc.includes(q) || synonyms.some((syn) => desc.includes(syn));
+  });
+  if (projMatch) {
+    return { matched: true, evidenceLevel: 2, source: 'project' };
+  }
+
+  // 4. In CV text
+  if (text.includes(q) || synonyms.some((syn) => text.includes(syn))) {
+    return { matched: true, evidenceLevel: 1, source: 'cv_text' };
+  }
+
+  return { matched: false, evidenceLevel: 0, source: 'none' };
+}
+
 export function calculateATSAlignment(
   profile: StudentProfile,
   jd: OpportunityJD,
@@ -285,10 +351,8 @@ export function calculateATSAlignment(
   const missingKeywords: string[] = [];
 
   for (const skill of mustHaves) {
-    const sLower = skill.toLowerCase();
-    const inProfile = profile.skills.some((ps) => ps.name.toLowerCase().includes(sLower) || sLower.includes(ps.name.toLowerCase()));
-    const inText = textToScan.includes(sLower);
-    if (inProfile || inText) {
+    const match = checkCandidateSkillMatch(profile, skill, textToScan);
+    if (match.matched) {
       mustMatchedCount++;
     } else {
       missingKeywords.push(skill);
@@ -299,10 +363,8 @@ export function calculateATSAlignment(
   // 2. Preferred skill match (weight: 20%)
   let prefMatchedCount = 0;
   for (const skill of preferred) {
-    const sLower = skill.toLowerCase();
-    const inProfile = profile.skills.some((ps) => ps.name.toLowerCase().includes(sLower) || sLower.includes(ps.name.toLowerCase()));
-    const inText = textToScan.includes(sLower);
-    if (inProfile || inText) {
+    const match = checkCandidateSkillMatch(profile, skill, textToScan);
+    if (match.matched) {
       prefMatchedCount++;
     } else {
       missingKeywords.push(skill);
@@ -362,15 +424,13 @@ export function calculateContextualRoleFit(profile: StudentProfile, jd: Opportun
   const matchedSkills: Array<{ skill: string; evidenceLevel: any; relevance: any }> = [];
 
   for (const mustSkill of jd.mustHaveSkills || []) {
-    const skillObj = profile.skills.find(
-      (s) => s.name.toLowerCase().includes(mustSkill.toLowerCase()) || mustSkill.toLowerCase().includes(s.name.toLowerCase())
-    );
+    const match = checkCandidateSkillMatch(profile, mustSkill, profile.resumeText);
 
-    if (skillObj) {
+    if (match.matched) {
       matchedSkills.push({
         skill: mustSkill,
-        evidenceLevel: skillObj.evidenceLevel || 2,
-        relevance: skillObj.relevance || 'Directly Relevant',
+        evidenceLevel: match.evidenceLevel || 2,
+        relevance: 'Directly Relevant',
       });
     } else {
       missingMustHaves.push({
@@ -383,10 +443,8 @@ export function calculateContextualRoleFit(profile: StudentProfile, jd: Opportun
   // Check Preferred Skills Coverage
   const missingPreferred: Array<{ skill: string; gapType: GapType }> = [];
   for (const prefSkill of jd.preferredSkills || []) {
-    const found = profile.skills.find(
-      (s) => s.name.toLowerCase().includes(prefSkill.toLowerCase()) || prefSkill.toLowerCase().includes(s.name.toLowerCase())
-    );
-    if (!found) {
+    const match = checkCandidateSkillMatch(profile, prefSkill, profile.resumeText);
+    if (!match.matched) {
       missingPreferred.push({
         skill: prefSkill,
         gapType: 'Profile Gap',

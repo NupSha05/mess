@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { OpportunityJD, GapType, EvidenceLevel } from '../../types';
+import { SkillMatchRadarChart } from './SkillMatchRadarChart';
 
 export const CVJobMatchIntelligence: React.FC = () => {
   const {
@@ -41,7 +42,7 @@ export const CVJobMatchIntelligence: React.FC = () => {
 
   // Active sub-tab inside CV & Job Match Intelligence
   const [activeAnalysisView, setActiveAnalysisView] = useState<
-    'overview-match' | 'cv-quality' | 'jd-analysis' | 'ats-alignment' | 'role-fit' | 'gap-taxonomy' | 'recommendations'
+    'overview-match' | 'cv-quality' | 'jd-analysis' | 'ats-alignment' | 'role-fit' | 'gap-taxonomy' | 'skills-agent' | 'recommendations'
   >('overview-match');
 
   // Input & Upload State
@@ -54,6 +55,10 @@ export const CVJobMatchIntelligence: React.FC = () => {
   const [jdRoleInput, setJdRoleInput] = useState(activeJD.title || '');
   const [jdCutoffInput, setJdCutoffInput] = useState(String(activeJD.cgpaCutoff || 7.0));
 
+  // Skills Matching & Industry-Wide Analysis Agent State
+  const [skillsAgentResult, setSkillsAgentResult] = useState<any>(null);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+
   // File upload refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -64,6 +69,36 @@ export const CVJobMatchIntelligence: React.FC = () => {
 
   const hasCv = Boolean(profile.resumeText && profile.resumeText.trim().length > 30);
   const hasJd = Boolean(activeJD && activeJD.title && activeJD.company && activeJD.title !== 'General Role');
+
+  // Run Skills Match & Industry-Wide Check Agent
+  const runSkillsAgent = async (customProfile?: any, customJd?: any, customCv?: string) => {
+    setIsAgentRunning(true);
+    try {
+      const prof = customProfile || profile;
+      const jd = customJd || activeJD;
+      const cv = customCv !== undefined ? customCv : profile.resumeText;
+      const res = await fetch('/api/ai/agent/skills-match-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: prof, cvText: cv, activeJD: jd }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSkillsAgentResult(data.analysis || data);
+      }
+    } catch (err) {
+      console.warn('Skills match agent notice:', err);
+    } finally {
+      setIsAgentRunning(false);
+    }
+  };
+
+  // Initial trigger for Skills Agent
+  React.useEffect(() => {
+    if (activeJD?.company && (profile.resumeText || profile.skills?.length > 0)) {
+      runSkillsAgent();
+    }
+  }, [activeJD?.company, activeJD?.title, profile?.resumeText]);
 
   // Handle file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,24 +139,133 @@ export const CVJobMatchIntelligence: React.FC = () => {
   // Confirm changes from Upload Modal
   const handleConfirmInputs = async () => {
     if (uploadTarget === 'cv') {
-      if (pastedCvText.trim()) {
-        updateProfile({
-          resumeText: pastedCvText.trim(),
-          resumeUrl: uploadedFile ? `local://${uploadedFile.name}` : profile.resumeUrl || 'local://updated_cv.txt',
-        });
-        await triggerCVAnalysis(pastedCvText.trim());
+      const activeText = pastedCvText.trim();
+      if (activeText) {
+        let updatedProf = { ...profile };
+        try {
+          const res = await fetch('/api/ai/extract-cv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvText: activeText }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const ext = data.extracted || data;
+
+            const existingSkillNames = new Set((profile.skills || []).map((s) => s.name.toLowerCase()));
+            const newSkills = (ext.skills || []).filter((s: any) => !existingSkillNames.has(s.name.toLowerCase()));
+            const mergedSkills = [...(profile.skills || []), ...newSkills];
+
+            const existingProjTitles = new Set((profile.projects || []).map((p) => p.title.toLowerCase()));
+            const newProjects = (ext.projects || []).filter((p: any) => !existingProjTitles.has(p.title.toLowerCase()));
+            const mergedProjects = [...(profile.projects || []), ...newProjects];
+
+            const existingExpKeys = new Set((profile.experiences || []).map((e) => `${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+            const newExps = (ext.experiences || []).filter((e: any) => !existingExpKeys.has(`${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+            const mergedExperiences = [...(profile.experiences || []), ...newExps];
+
+            const newProfileData: any = {
+              resumeText: activeText,
+              resumeUrl: uploadedFile ? `local://${uploadedFile.name}` : profile.resumeUrl || 'local://updated_cv.txt',
+              skills: mergedSkills.length > 0 ? mergedSkills : profile.skills,
+              projects: mergedProjects.length > 0 ? mergedProjects : profile.projects,
+              experiences: mergedExperiences.length > 0 ? mergedExperiences : profile.experiences,
+              certifications: ext.certifications && ext.certifications.length > 0 ? ext.certifications : profile.certifications,
+              achievements: ext.achievements && ext.achievements.length > 0 ? ext.achievements : profile.achievements,
+            };
+
+            if (ext.personalInfo?.name && (!profile.name || profile.name === 'Student')) {
+              newProfileData.name = ext.personalInfo.name;
+            }
+            if (ext.personalInfo?.email && !profile.email) {
+              newProfileData.email = ext.personalInfo.email;
+            }
+            if (ext.personalInfo?.phone && !profile.phone) {
+              newProfileData.phone = ext.personalInfo.phone;
+            }
+            if (ext.personalInfo?.linkedInUrl && !profile.linkedInUrl) {
+              newProfileData.linkedInUrl = ext.personalInfo.linkedInUrl;
+            }
+            if (ext.personalInfo?.githubUrl && !profile.githubUrl) {
+              newProfileData.githubUrl = ext.personalInfo.githubUrl;
+            }
+            if (ext.class10) {
+              newProfileData.class10 = { ...profile.class10, ...ext.class10 };
+            }
+            if (ext.class12) {
+              newProfileData.class12 = { ...profile.class12, ...ext.class12 };
+            }
+            if (ext.postgraduate) {
+              newProfileData.postgraduate = { ...profile.postgraduate, ...ext.postgraduate };
+            }
+
+            updatedProf = { ...profile, ...newProfileData };
+            updateProfile(newProfileData);
+          } else {
+            updateProfile({
+              resumeText: activeText,
+              resumeUrl: uploadedFile ? `local://${uploadedFile.name}` : profile.resumeUrl || 'local://updated_cv.txt',
+            });
+          }
+        } catch {
+          updateProfile({
+            resumeText: activeText,
+            resumeUrl: uploadedFile ? `local://${uploadedFile.name}` : profile.resumeUrl || 'local://updated_cv.txt',
+          });
+        }
+        await triggerCVAnalysis(activeText);
+        await runSkillsAgent(updatedProf, activeJD, activeText);
       }
     } else {
-      const parsedCutoff = parseFloat(jdCutoffInput) || 0;
-      const updatedJd: OpportunityJD = {
+      let parsed: any = null;
+      if (pastedJdText.trim()) {
+        try {
+          const res = await fetch('/api/ai/parse-jd', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jdText: pastedJdText.trim() }),
+          });
+          if (res.ok) {
+            parsed = await res.json();
+          }
+        } catch (err) {
+          console.warn('JD parse API notice:', err);
+        }
+      }
+
+      const companyName = (parsed?.company && parsed.company !== 'Unknown Organization')
+        ? parsed.company
+        : (uploadedFile ? uploadedFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') : jdCompanyInput.trim() || 'Target Company');
+      const roleTitle = parsed?.title ? parsed.title : (jdRoleInput.trim() || 'Software Engineer');
+      const cutoffVal = parsed?.cgpaCutoff !== undefined && parsed?.cgpaCutoff !== null ? parsed.cgpaCutoff : (parseFloat(jdCutoffInput) || 0);
+
+      const newJdObj: OpportunityJD = {
         ...activeJD,
         id: `custom-jd-${Date.now()}`,
-        company: jdCompanyInput.trim() || 'Target Company',
-        title: jdRoleInput.trim() || 'Software Engineer',
-        cgpaCutoff: parsedCutoff,
+        company: companyName,
+        title: roleTitle,
+        function: parsed?.function || 'Engineering & Technology',
+        location: parsed?.location || '',
+        workArrangement: parsed?.workArrangement || 'Hybrid',
+        experienceRange: parsed?.experienceRange || '0 - 1 Years',
+        educationRequirement: parsed?.educationRequirement || 'Relevant Bachelor Degree',
+        cgpaCutoff: cutoffVal,
+        maxBacklogs: parsed?.maxBacklogs ?? 0,
+        salaryRange: parsed?.salaryRange || 'Competitive',
+        mustHaveSkills: parsed?.mustHaveSkills && parsed.mustHaveSkills.length > 0 ? parsed.mustHaveSkills : ['Core Programming', 'Data Structures & Algorithms', 'Databases (SQL)'],
+        preferredSkills: parsed?.preferredSkills || ['System Design'],
+        goodToHaveSkills: parsed?.goodToHaveSkills || [],
+        keyResponsibilities: parsed?.keyResponsibilities || [],
+        ambiguousOrUncertainTerms: parsed?.ambiguousOrUncertainTerms || [],
         rawText: pastedJdText.trim(),
       };
-      setActiveJD(updatedJd);
+
+      setActiveJD(newJdObj);
+      setJdCompanyInput(companyName);
+      setJdRoleInput(roleTitle);
+      setJdCutoffInput(String(cutoffVal));
+
+      await runSkillsAgent(profile, newJdObj, profile.resumeText);
       if (hasCv) {
         await triggerCVAnalysis(profile.resumeText || undefined);
       }
@@ -134,6 +278,7 @@ export const CVJobMatchIntelligence: React.FC = () => {
   const handleReRunAnalysis = async () => {
     if (profile.resumeText) {
       await triggerCVAnalysis(profile.resumeText);
+      await runSkillsAgent(profile, activeJD, profile.resumeText);
     }
   };
 
@@ -322,6 +467,13 @@ export const CVJobMatchIntelligence: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {/* Radar Chart: Current Skill Levels vs Target Job Role Requirements */}
+          <SkillMatchRadarChart
+            profile={profile}
+            activeJD={activeJD}
+            currentFitReport={currentFitReport}
+          />
 
           {/* Side-by-Side CV vs JD Executive Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -644,6 +796,13 @@ export const CVJobMatchIntelligence: React.FC = () => {
               Match Tier: {currentFitReport.matchTier}
             </span>
           </div>
+
+          {/* Radar Chart in Role Fit Analysis */}
+          <SkillMatchRadarChart
+            profile={profile}
+            activeJD={activeJD}
+            currentFitReport={currentFitReport}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">

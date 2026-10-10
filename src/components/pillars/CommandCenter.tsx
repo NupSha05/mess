@@ -98,6 +98,12 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
     undergrad?: { institution: string; degree: string; branch: string; cgpa: number; year: number };
     linkedIn?: string;
     github?: string;
+    personalInfo?: any;
+    skills?: SkillItem[];
+    projects?: ProjectRecord[];
+    experiences?: any[];
+    certifications?: any[];
+    achievements?: any[];
   } | null>(null);
 
   // Helper to extract text from an uploaded file
@@ -152,13 +158,13 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
     });
   };
 
-  // Parse Academic Info and Hyperlinks from CV text
+  // Fallback text parser when backend AI extraction is unavailable
   const parseAcademicAndLinksFromText = (text: string) => {
     // 1. LinkedIn profile link
     const linkedInMatch = text.match(/(?:https?:\/\/(?:www\.)?)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
     const detectedLinkedIn = linkedInMatch ? `https://linkedin.com/in/${linkedInMatch[1]}` : '';
 
-    // 2. GitHub profile link (NOT repo link)
+    // 2. GitHub profile link (NOT repo link - strictly profile URL)
     let detectedGitHub = '';
     const allGithub = text.match(/(?:https?:\/\/(?:www\.)?)?github\.com\/([a-zA-Z0-9_.-]+)(\/[a-zA-Z0-9_.-]+)?/gi) || [];
     for (const gh of allGithub) {
@@ -170,44 +176,72 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
       }
     }
 
-    // 3. Class 10
+    // Name, Email, Phone
+    const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    const phoneMatch = text.match(/(?:(?:\+?\d{1,4}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,5}[-.\s]?\d{3,5})/);
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    let detectedName = '';
+    for (const l of lines.slice(0, 5)) {
+      if (!l.includes('@') && !l.includes('http') && !l.includes('+') && !/^(RESUME|CURRICULUM|CV|PROFILE|CONTACT)/i.test(l) && l.length >= 3 && l.length <= 40) {
+        detectedName = l.replace(/^(RESUME|CURRICULUM VITAE|CV)[:\s-]*/i, '').trim();
+        break;
+      }
+    }
+
+    // 3. Class 10 (Secondary School Examination)
     let detectedClass10: SchoolAcademicRecord | undefined;
-    const c10Match = text.match(/(?:10th|Class\s*X|Secondary\s*School|Matriculation|SSLC)[^\n]*?(CBSE|ICSE|State\s*Board)?[^\n]*?([0-9]{2}(?:\.[0-9]+)?%|[0-9]\.[0-9]+\s*CGPA)?/i);
-    if (c10Match && (c10Match[1] || c10Match[2])) {
-      const scoreVal = c10Match[2]?.trim() || '';
-      const pctVal = scoreVal.includes('%') ? parseFloat(scoreVal.replace('%', '')) : undefined;
-      const yearMatch = text.match(/(?:10th|Class\s*X|Secondary)[^\n]*?(20[12][0-9])/i);
+    const c10Match = text.match(/(?:10th|Class\s*X|Secondary\s*School|Matriculation|SSLC)[^\n.]*(?:\n[^\n.]*){0,3}/i);
+    if (c10Match) {
+      const block = c10Match[0];
+      const boardMatch = block.match(/(CBSE|ICSE|State\s*Board|WBBSE|UP\s*Board|MSBSHSE|BSEB|Matriculation)/i);
+      const scorePct = block.match(/([0-9]{2}(?:\.[0-9]+)?)\s*%/);
+      const scoreCgpa = block.match(/(?:CGPA|GPA|Grade Point)?[:\s]*([0-9]\.[0-9]+)\s*(?:\/\s*10)?/i);
+      const yearMatch = block.match(/(20[12][0-9])/);
+      const schoolMatch = block.match(/(?:at|from|school|vidyalaya|academy|public school)[:\s]*([A-Za-z\s,.-]{4,45}(?:School|Vidyalaya|Academy|Public School|High School|Convent))/i) ||
+        block.match(/([A-Z][A-Za-z\s,.-]{4,45}(?:School|Vidyalaya|Academy|Public School|High School|Convent))/);
+
+      const scoreStr = scorePct ? `${scorePct[1]}%` : scoreCgpa ? `${scoreCgpa[1]} CGPA` : '';
+      const pctVal = scorePct ? parseFloat(scorePct[1]) : scoreCgpa ? parseFloat(scoreCgpa[1]) * 9.5 : undefined;
+
       detectedClass10 = {
-        board: c10Match[1]?.trim() || 'Board Examination',
-        school: '',
-        score: scoreVal,
-        year: yearMatch ? parseInt(yearMatch[1]) : 0,
+        board: boardMatch ? boardMatch[0].trim() : 'CBSE',
+        school: schoolMatch ? schoolMatch[1]?.trim() || schoolMatch[0]?.trim() : 'Secondary High School',
+        score: scoreStr,
+        year: yearMatch ? parseInt(yearMatch[1]) : 2020,
         percentage: pctVal,
       };
     }
 
-    // 4. Class 12
+    // 4. Class 12 (Senior Secondary School Examination)
     let detectedClass12: SchoolAcademicRecord | undefined;
-    const c12Match = text.match(/(?:12th|Class\s*XII|Senior\s*Secondary|Intermediate|HSC|PUC)[^\n]*?(CBSE|ICSE|State\s*Board)?[^\n]*?([0-9]{2}(?:\.[0-9]+)?%|[0-9]\.[0-9]+\s*CGPA)?/i);
-    if (c12Match && (c12Match[1] || c12Match[2])) {
-      const scoreVal = c12Match[2]?.trim() || '';
-      const pctVal = scoreVal.includes('%') ? parseFloat(scoreVal.replace('%', '')) : undefined;
-      const yearMatch = text.match(/(?:12th|Class\s*XII|Senior\s*Secondary)[^\n]*?(20[12][0-9])/i);
-      const streamMatch = text.match(/(?:Science|PCM|PCB|Commerce|Arts)/i);
+    const c12Match = text.match(/(?:12th|Class\s*XII|Senior\s*Secondary|Intermediate|HSC|PUC)[^\n.]*(?:\n[^\n.]*){0,3}/i);
+    if (c12Match) {
+      const block = c12Match[0];
+      const boardMatch = block.match(/(CBSE|ICSE|State\s*Board|ISC|HSC|PUC|UP\s*Board)/i);
+      const streamMatch = block.match(/(Science(?:\s*\([A-Za-z]+\))?|PCM|PCB|Commerce|Arts|Humanities)/i);
+      const scorePct = block.match(/([0-9]{2}(?:\.[0-9]+)?)\s*%/);
+      const scoreCgpa = block.match(/(?:CGPA|GPA)?[:\s]*([0-9]\.[0-9]+)\s*(?:\/\s*10)?/i);
+      const yearMatch = block.match(/(20[12][0-9])/);
+      const schoolMatch = block.match(/(?:at|from|school|college|junior college)[:\s]*([A-Za-z\s,.-]{4,45}(?:School|Vidyalaya|College|Junior College|Academy))/i) ||
+        block.match(/([A-Z][A-Za-z\s,.-]{4,45}(?:School|Vidyalaya|College|Junior College|Academy))/);
+
+      const scoreStr = scorePct ? `${scorePct[1]}%` : scoreCgpa ? `${scoreCgpa[1]} CGPA` : '';
+      const pctVal = scorePct ? parseFloat(scorePct[1]) : scoreCgpa ? parseFloat(scoreCgpa[1]) * 9.5 : undefined;
+
       detectedClass12 = {
-        board: c12Match[1]?.trim() || 'Senior Secondary Board',
-        school: '',
-        stream: streamMatch ? streamMatch[0] : 'Science',
-        score: scoreVal,
-        year: yearMatch ? parseInt(yearMatch[1]) : 0,
+        board: boardMatch ? boardMatch[0].trim() : 'CBSE',
+        school: schoolMatch ? schoolMatch[1]?.trim() || schoolMatch[0]?.trim() : 'Senior Secondary School',
+        stream: streamMatch ? streamMatch[0].trim() : 'Science (PCM)',
+        score: scoreStr,
+        year: yearMatch ? parseInt(yearMatch[1]) : 2022,
         percentage: pctVal,
       };
     }
 
     // 5. Undergraduate
-    const collegeMatch = text.match(/([A-Za-z\s,.-]{4,50}(?:Institute of Technology|College of Engineering|University|NIT|IIT|IIIT|BITS|College))/i);
-    const degreeMatch = text.match(/(B\.Tech|B\.E\.|B\.Sc|BCA|Bachelor of Technology|Bachelor of Engineering)/i);
-    const branchMatch = text.match(/(Computer Science(?: & Engineering)?|Information Technology|Electronics(?: & Communication)?|Mechanical Engineering|Electrical Engineering|Data Science|AI & ML)/i);
+    const collegeMatch = text.match(/([A-Za-z\s,.-]{4,55}(?:Institute of Technology|College of Engineering|University|NIT|IIT|IIIT|BITS|College|Campus))/i);
+    const degreeMatch = text.match(/(B\.Tech|B\.E\.|B\.Sc|BCA|Bachelor of Technology|Bachelor of Engineering|Bachelor of Science)/i);
+    const branchMatch = text.match(/(Computer Science(?: & Engineering)?|Information Technology|Electronics(?: & Communication)?|Mechanical Engineering|Electrical Engineering|Data Science|Artificial Intelligence|AI & ML)/i);
     const cgpaMatch = text.match(/(?:CGPA|GPA|Cumulative Grade Point)[:\s]*([0-9.]+)(?:\s*\/\s*10)?/i);
     const gradYearMatch = text.match(/(?:20[12][0-9]\s*[-–]\s*(20[23][0-9])|(?:Batch of|Graduating in|Completion Year|Class of)\s*(20[23][0-9]))/i);
 
@@ -219,7 +253,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
       year: gradYearMatch ? parseInt(gradYearMatch[1] || gradYearMatch[2]) : 0,
     };
 
-    // 6. Postgraduate
+    // 6. Postgraduate (Optional)
     let detectedPostgrad: PostgraduateRecord | undefined;
     const pgDegreeMatch = text.match(/(MBA|PGDM|M\.Tech|MCA|M\.S\.|Master of Technology|Master of Business Administration)/i);
     if (pgDegreeMatch) {
@@ -235,6 +269,13 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
     }
 
     return {
+      personalInfo: {
+        name: detectedName,
+        email: emailMatch ? emailMatch[1].trim() : '',
+        phone: phoneMatch ? phoneMatch[0].trim() : '',
+        linkedInUrl: detectedLinkedIn,
+        githubUrl: detectedGitHub,
+      },
       linkedIn: detectedLinkedIn,
       github: detectedGitHub,
       class10: detectedClass10,
@@ -244,69 +285,102 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
     };
   };
 
+  // Helper to extract full CV entities via server AI service with deterministic fallback
+  const extractCVData = async (text: string) => {
+    try {
+      const res = await fetch('/api/ai/extract-cv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvText: text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const ext = data.extracted || data;
+        if (ext && (ext.personalInfo || ext.class10 || ext.class12 || ext.skills?.length > 0)) {
+          return {
+            ...ext,
+            linkedIn: ext.personalInfo?.linkedInUrl || '',
+            github: ext.personalInfo?.githubUrl || '',
+            undergrad: {
+              institution: ext.personalInfo?.college || ext.graduation?.institution || '',
+              degree: ext.personalInfo?.degree || ext.graduation?.degree || ext.personalInfo?.course || '',
+              branch: ext.personalInfo?.branch || ext.graduation?.branch || '',
+              cgpa: ext.personalInfo?.cgpa || ext.graduation?.cgpa || 0,
+              year: ext.personalInfo?.graduationYear || ext.graduation?.graduationYear || 0,
+            },
+            postgrad: ext.postgraduate,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Backend extract-cv notice, using deterministic extraction:', err);
+    }
+    return parseAcademicAndLinksFromText(text);
+  };
+
   // Compare detected values with profile, setup review items, and display review modal
-  const prepareAndShowAcademicReview = (text: string) => {
-    const extracted = parseAcademicAndLinksFromText(text);
+  const prepareAndShowAcademicReview = async (text: string, preExtractedData?: any) => {
+    const extracted = preExtractedData || (await extractCVData(text));
     setExtractedRawData(extracted);
 
     const items: AcademicReviewItem[] = [];
 
-    // Undergraduate CGPA
-    if (extracted.undergrad.cgpa > 0) {
-      const savedCGPA = profile.education.selfReportedCGPA ? String(profile.education.selfReportedCGPA) : '';
-      const detectedCGPA = String(extracted.undergrad.cgpa);
-      const hasConflict = savedCGPA !== '' && savedCGPA !== detectedCGPA;
+    // 1. Personal Identity & Contact
+    if (extracted.personalInfo?.name) {
+      const savedName = profile.name || '';
+      const detectedName = extracted.personalInfo.name;
+      const hasConflict = savedName !== '' && savedName.toLowerCase() !== detectedName.toLowerCase();
       items.push({
-        id: 'cgpa',
-        label: 'Undergraduate CGPA',
-        category: 'Academics',
-        savedValue: savedCGPA || 'Not set',
-        detectedValue: detectedCGPA,
-        currentChoice: detectedCGPA,
+        id: 'name',
+        label: 'Candidate Full Name',
+        category: 'General',
+        savedValue: savedName || 'Not set',
+        detectedValue: detectedName,
+        currentChoice: detectedName,
         isConflict: hasConflict,
       });
     }
 
-    // Undergraduate College
-    if (extracted.undergrad.institution) {
-      const savedCollege = profile.education.institution || '';
-      const detectedCollege = extracted.undergrad.institution;
-      const hasConflict = savedCollege !== '' && savedCollege.toLowerCase() !== detectedCollege.toLowerCase();
+    if (extracted.personalInfo?.email) {
+      const savedEmail = profile.email || '';
+      const detectedEmail = extracted.personalInfo.email;
+      const hasConflict = savedEmail !== '' && savedEmail.toLowerCase() !== detectedEmail.toLowerCase();
       items.push({
-        id: 'college',
-        label: 'College / Institution',
-        category: 'Academics',
-        savedValue: savedCollege || 'Not set',
-        detectedValue: detectedCollege,
-        currentChoice: detectedCollege,
+        id: 'email',
+        label: 'Email Address',
+        category: 'General',
+        savedValue: savedEmail || 'Not set',
+        detectedValue: detectedEmail,
+        currentChoice: detectedEmail,
         isConflict: hasConflict,
       });
     }
 
-    // Degree / Major
-    if (extracted.undergrad.degree || extracted.undergrad.branch) {
-      const savedDegree = profile.education.degree ? `${profile.education.degree} (${profile.education.branch})` : '';
-      const detectedDegree = `${extracted.undergrad.degree || 'Degree'} ${extracted.undergrad.branch ? `in ${extracted.undergrad.branch}` : ''}`.trim();
-      const hasConflict = savedDegree !== '' && savedDegree.toLowerCase() !== detectedDegree.toLowerCase();
+    if (extracted.personalInfo?.phone) {
+      const savedPhone = profile.phone || '';
+      const detectedPhone = extracted.personalInfo.phone;
+      const hasConflict = savedPhone !== '' && savedPhone !== detectedPhone;
       items.push({
-        id: 'degree',
-        label: 'Degree & Major',
-        category: 'Academics',
-        savedValue: savedDegree || 'Not set',
-        detectedValue: detectedDegree,
-        currentChoice: detectedDegree,
+        id: 'phone',
+        label: 'Phone Number',
+        category: 'General',
+        savedValue: savedPhone || 'Not set',
+        detectedValue: detectedPhone,
+        currentChoice: detectedPhone,
         isConflict: hasConflict,
       });
     }
 
-    // Class 10
-    if (extracted.class10 && extracted.class10.score) {
-      const savedC10 = profile.class10 ? `${profile.class10.score} (${profile.class10.board})` : '';
-      const detectedC10 = `${extracted.class10.score} (${extracted.class10.board})`;
+    // 2. Class 10 (Secondary Education)
+    if (extracted.class10 && (extracted.class10.score || extracted.class10.board)) {
+      const savedC10 = profile.class10?.score
+        ? `${profile.class10.school ? `${profile.class10.school}, ` : ''}${profile.class10.board}: ${profile.class10.score} (${profile.class10.year || 'N/A'})`
+        : '';
+      const detectedC10 = `${extracted.class10.school ? `${extracted.class10.school}, ` : ''}${extracted.class10.board}: ${extracted.class10.score || 'Appeared'} (${extracted.class10.year || 'N/A'})`;
       const hasConflict = savedC10 !== '' && savedC10 !== detectedC10;
       items.push({
         id: 'class10',
-        label: 'Class 10 Score',
+        label: 'Class 10 / Secondary Education',
         category: 'Academics',
         savedValue: savedC10 || 'Not set',
         detectedValue: detectedC10,
@@ -315,14 +389,16 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
       });
     }
 
-    // Class 12
-    if (extracted.class12 && extracted.class12.score) {
-      const savedC12 = profile.class12 ? `${profile.class12.score} (${profile.class12.stream})` : '';
-      const detectedC12 = `${extracted.class12.score} (${extracted.class12.stream})`;
+    // 3. Class 12 (Senior Secondary Education)
+    if (extracted.class12 && (extracted.class12.score || extracted.class12.board)) {
+      const savedC12 = profile.class12?.score
+        ? `${profile.class12.school ? `${profile.class12.school}, ` : ''}${profile.class12.board} (${profile.class12.stream || 'Science'}): ${profile.class12.score} (${profile.class12.year || 'N/A'})`
+        : '';
+      const detectedC12 = `${extracted.class12.school ? `${extracted.class12.school}, ` : ''}${extracted.class12.board} (${extracted.class12.stream || 'Science'}): ${extracted.class12.score || 'Appeared'} (${extracted.class12.year || 'N/A'})`;
       const hasConflict = savedC12 !== '' && savedC12 !== detectedC12;
       items.push({
         id: 'class12',
-        label: 'Class 12 Score',
+        label: 'Class 12 / Senior Secondary Education',
         category: 'Academics',
         savedValue: savedC12 || 'Not set',
         detectedValue: detectedC12,
@@ -331,52 +407,130 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
       });
     }
 
-    // Postgraduate
-    if (extracted.postgrad && extracted.postgrad.degree) {
-      const savedPG = profile.postgraduate ? `${profile.postgraduate.degree} from ${profile.postgraduate.institution}` : '';
-      const detectedPG = `${extracted.postgrad.degree} from ${extracted.postgrad.institution || 'University'}`;
-      const hasConflict = savedPG !== '' && savedPG !== detectedPG;
+    // 4. Undergraduate College
+    if (extracted.undergrad?.institution) {
+      const savedCollege = profile.college || profile.education.institution || '';
+      const detectedCollege = extracted.undergrad.institution;
+      const hasConflict = savedCollege !== '' && savedCollege.toLowerCase() !== detectedCollege.toLowerCase();
+      items.push({
+        id: 'college',
+        label: 'Graduation College / Institution',
+        category: 'Academics',
+        savedValue: savedCollege || 'Not set',
+        detectedValue: detectedCollege,
+        currentChoice: detectedCollege,
+        isConflict: hasConflict,
+      });
+    }
+
+    // 5. Degree / Major
+    if (extracted.undergrad?.degree || extracted.undergrad?.branch) {
+      const savedDegree = profile.course || profile.education.degree
+        ? `${profile.course || profile.education.degree} (${profile.education.branch || ''})`
+        : '';
+      const detectedDegree = `${extracted.undergrad.degree || 'B.Tech'} ${extracted.undergrad.branch ? `in ${extracted.undergrad.branch}` : ''}`.trim();
+      const hasConflict = savedDegree !== '' && savedDegree.toLowerCase() !== detectedDegree.toLowerCase();
+      items.push({
+        id: 'degree',
+        label: 'Graduation Degree & Specialization',
+        category: 'Academics',
+        savedValue: savedDegree || 'Not set',
+        detectedValue: detectedDegree,
+        currentChoice: detectedDegree,
+        isConflict: hasConflict,
+      });
+    }
+
+    // 6. Undergraduate CGPA
+    if (extracted.undergrad?.cgpa && extracted.undergrad.cgpa > 0) {
+      const savedCGPA = profile.education.verifiedCGPA || profile.education.selfReportedCGPA
+        ? String(profile.education.verifiedCGPA || profile.education.selfReportedCGPA)
+        : '';
+      const detectedCGPA = String(extracted.undergrad.cgpa);
+      const hasConflict = savedCGPA !== '' && savedCGPA !== detectedCGPA;
+      items.push({
+        id: 'cgpa',
+        label: 'Cumulative CGPA (0.0 - 10.0 scale)',
+        category: 'Academics',
+        savedValue: savedCGPA ? `${savedCGPA} / 10.0` : 'Not set',
+        detectedValue: `${detectedCGPA} / 10.0`,
+        currentChoice: detectedCGPA,
+        isConflict: hasConflict,
+      });
+    }
+
+    // 7. Graduation Completion Year
+    if (extracted.undergrad?.year && extracted.undergrad.year > 0) {
+      const savedYear = profile.education.expectedGraduationYear
+        ? String(profile.education.expectedGraduationYear)
+        : '';
+      const detectedYear = String(extracted.undergrad.year);
+      const hasConflict = savedYear !== '' && savedYear !== detectedYear;
+      items.push({
+        id: 'gradYear',
+        label: 'Graduation Passing Year',
+        category: 'Academics',
+        savedValue: savedYear || 'Not set',
+        detectedValue: detectedYear,
+        currentChoice: detectedYear,
+        isConflict: hasConflict,
+      });
+    }
+
+    // 8. Postgraduate (Optional)
+    if (extracted.postgrad?.degree || profile.postgraduate?.degree) {
+      const savedPG = profile.postgraduate?.degree
+        ? `${profile.postgraduate.degree} from ${profile.postgraduate.institution || 'University'}`
+        : 'Not enrolled (Optional milestone)';
+      const detectedPG = extracted.postgrad?.degree
+        ? `${extracted.postgrad.degree} from ${extracted.postgrad.institution || 'University'}`
+        : 'Not present in CV (Optional)';
+      const hasConflict = savedPG !== 'Not enrolled (Optional milestone)' && savedPG !== detectedPG;
       items.push({
         id: 'postgrad',
-        label: 'Postgraduate Degree',
+        label: 'Post-Graduation / Master (Optional)',
         category: 'Academics',
-        savedValue: savedPG || 'Not set',
+        savedValue: savedPG,
         detectedValue: detectedPG,
         currentChoice: detectedPG,
         isConflict: hasConflict,
       });
     }
 
-    // LinkedIn URL
-    if (extracted.linkedIn) {
+    // 9. LinkedIn URL
+    if (extracted.linkedIn || profile.linkedInUrl) {
       const savedLinkedIn = profile.linkedInUrl || '';
-      const detectedLinkedIn = extracted.linkedIn;
-      const hasConflict = savedLinkedIn !== '' && savedLinkedIn !== detectedLinkedIn;
-      items.push({
-        id: 'linkedin',
-        label: 'LinkedIn Profile URL',
-        category: 'Links',
-        savedValue: savedLinkedIn || 'Not set',
-        detectedValue: detectedLinkedIn,
-        currentChoice: detectedLinkedIn,
-        isConflict: hasConflict,
-      });
+      const detectedLinkedIn = extracted.linkedIn || '';
+      const hasConflict = savedLinkedIn !== '' && detectedLinkedIn !== '' && savedLinkedIn !== detectedLinkedIn;
+      if (detectedLinkedIn || savedLinkedIn) {
+        items.push({
+          id: 'linkedin',
+          label: 'LinkedIn Profile URL',
+          category: 'Links',
+          savedValue: savedLinkedIn || 'Not set',
+          detectedValue: detectedLinkedIn || 'Not found in CV',
+          currentChoice: detectedLinkedIn || savedLinkedIn,
+          isConflict: hasConflict,
+        });
+      }
     }
 
-    // GitHub URL
-    if (extracted.github) {
+    // 10. GitHub URL
+    if (extracted.github || profile.githubUrl) {
       const savedGitHub = profile.githubUrl || '';
-      const detectedGitHub = extracted.github;
-      const hasConflict = savedGitHub !== '' && savedGitHub !== detectedGitHub;
-      items.push({
-        id: 'github',
-        label: 'GitHub Profile URL',
-        category: 'Links',
-        savedValue: savedGitHub || 'Not set',
-        detectedValue: detectedGitHub,
-        currentChoice: detectedGitHub,
-        isConflict: hasConflict,
-      });
+      const detectedGitHub = extracted.github || '';
+      const hasConflict = savedGitHub !== '' && detectedGitHub !== '' && savedGitHub !== detectedGitHub;
+      if (detectedGitHub || savedGitHub) {
+        items.push({
+          id: 'github',
+          label: 'GitHub Profile URL (Clean Profile)',
+          category: 'Links',
+          savedValue: savedGitHub || 'Not set',
+          detectedValue: detectedGitHub || 'Not found in CV',
+          currentChoice: detectedGitHub || savedGitHub,
+          isConflict: hasConflict,
+        });
+      }
     }
 
     if (items.length > 0) {
@@ -397,47 +551,104 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
 
     reviewItems.forEach((item) => {
       const chosen = item.currentChoice;
-      if (item.id === 'cgpa') {
-        const num = parseFloat(chosen) || 0;
+      if (!chosen || chosen === 'Not set' || chosen.includes('Not present') || chosen.includes('Not enrolled')) {
+        return;
+      }
+
+      if (item.id === 'name') {
+        updatesToProfile.name = chosen;
+      } else if (item.id === 'email') {
+        updatesToProfile.email = chosen;
+      } else if (item.id === 'phone') {
+        updatesToProfile.phone = chosen;
+      } else if (item.id === 'cgpa') {
+        const num = parseFloat(chosen.replace('/ 10.0', '').trim()) || 0;
         if (num > 0) {
           updatesToEdu.selfReportedCGPA = num;
           updatesToEdu.verifiedCGPA = num;
         }
       } else if (item.id === 'college') {
-        if (chosen && chosen !== 'Not set') {
-          updatesToEdu.institution = chosen;
-          updatesToProfile.college = chosen;
-        }
+        updatesToEdu.institution = chosen;
+        updatesToProfile.college = chosen;
       } else if (item.id === 'degree') {
         if (extractedRawData.undergrad?.degree) {
           updatesToEdu.degree = extractedRawData.undergrad.degree;
           updatesToProfile.course = extractedRawData.undergrad.degree;
+        } else {
+          updatesToEdu.degree = chosen;
+          updatesToProfile.course = chosen;
         }
         if (extractedRawData.undergrad?.branch) {
           updatesToEdu.branch = extractedRawData.undergrad.branch;
         }
+      } else if (item.id === 'gradYear') {
+        const yr = parseInt(chosen) || 0;
+        if (yr >= 2020) {
+          updatesToEdu.expectedGraduationYear = yr;
+          updatesToEdu.expectedCompletionDate = `May ${yr}`;
+        }
       } else if (item.id === 'class10') {
         if (extractedRawData.class10) {
-          updatesToProfile.class10 = extractedRawData.class10;
+          updatesToProfile.class10 = {
+            ...profile.class10,
+            ...extractedRawData.class10,
+          };
         }
       } else if (item.id === 'class12') {
         if (extractedRawData.class12) {
-          updatesToProfile.class12 = extractedRawData.class12;
+          updatesToProfile.class12 = {
+            ...profile.class12,
+            ...extractedRawData.class12,
+          };
         }
       } else if (item.id === 'postgrad') {
-        if (extractedRawData.postgrad) {
-          updatesToProfile.postgraduate = extractedRawData.postgrad;
+        if (extractedRawData.postgrad?.degree) {
+          updatesToProfile.postgraduate = {
+            ...profile.postgraduate,
+            ...extractedRawData.postgrad,
+          };
         }
       } else if (item.id === 'linkedin') {
-        if (chosen && chosen !== 'Not set') {
-          updatesToProfile.linkedInUrl = chosen;
-        }
+        updatesToProfile.linkedInUrl = chosen;
       } else if (item.id === 'github') {
-        if (chosen && chosen !== 'Not set') {
-          updatesToProfile.githubUrl = chosen;
-        }
+        updatesToProfile.githubUrl = chosen;
       }
     });
+
+    // Merge extracted skills with deduplication
+    if (Array.isArray(extractedRawData.skills) && extractedRawData.skills.length > 0) {
+      const existingNames = new Set((profile.skills || []).map((s) => s.name.toLowerCase()));
+      const newSkills = extractedRawData.skills.filter((s: any) => !existingNames.has(s.name.toLowerCase()));
+      updatesToProfile.skills = [...(profile.skills || []), ...newSkills];
+    }
+
+    // Merge extracted experiences (internships)
+    if (Array.isArray(extractedRawData.experiences) && extractedRawData.experiences.length > 0) {
+      const existingCompRole = new Set((profile.experiences || []).map((e) => `${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+      const newExps = extractedRawData.experiences.filter((e: any) => !existingCompRole.has(`${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+      updatesToProfile.experiences = [...(profile.experiences || []), ...newExps];
+    }
+
+    // Merge extracted projects
+    if (Array.isArray(extractedRawData.projects) && extractedRawData.projects.length > 0) {
+      const existingProjTitles = new Set((profile.projects || []).map((p) => p.title.toLowerCase()));
+      const newProjs = extractedRawData.projects.filter((p: any) => !existingProjTitles.has(p.title.toLowerCase()));
+      updatesToProfile.projects = [...(profile.projects || []), ...newProjs];
+    }
+
+    // Merge extracted certifications
+    if (Array.isArray(extractedRawData.certifications) && extractedRawData.certifications.length > 0) {
+      const existingCerts = new Set((profile.certifications || []).map((c) => c.title.toLowerCase()));
+      const newCerts = extractedRawData.certifications.filter((c: any) => !existingCerts.has(c.title.toLowerCase()));
+      updatesToProfile.certifications = [...(profile.certifications || []), ...newCerts];
+    }
+
+    // Merge extracted achievements
+    if (Array.isArray(extractedRawData.achievements) && extractedRawData.achievements.length > 0) {
+      const existingAchs = new Set((profile.achievements || []).map((a) => a.title.toLowerCase()));
+      const newAchs = extractedRawData.achievements.filter((a: any) => !existingAchs.has(a.title.toLowerCase()));
+      updatesToProfile.achievements = [...(profile.achievements || []), ...newAchs];
+    }
 
     if (Object.keys(updatesToEdu).length > 0) {
       updateEducation(updatesToEdu);
@@ -447,7 +658,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab, onOp
     }
 
     setShowReviewModal(false);
-    setAnalysisMessage('Academic details and profile links updated successfully.');
+    setAnalysisMessage('Profile, academics, verified skills, and experience reconciled successfully.');
   };
 
   // CV File Selection (Stable review state - does NOT close)
@@ -555,38 +766,50 @@ Software Engineering Intern — CloudScale Labs (May 2024 - July 2024)
       setJdText(text);
       setJdFileName(jdFile.name);
 
-      // Heuristic extraction from JD document
-      const companyMatch = text.match(/(?:at|company|hiring for)\s+([A-Z][A-Za-z0-9\s&]{2,30})/i);
-      const titleMatch = text.match(/(?:role|position|title|engineer|developer|intern):\s*([A-Za-z0-9\s-]{3,40})/i);
-      const cutoffMatch = text.match(/(?:cgpa|cutoff|gpa)\s*(?:of|:)?\s*([0-9.]+)/i);
+      let parsed: any = null;
+      try {
+        const res = await fetch('/api/ai/parse-jd', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jdText: text }),
+        });
+        if (res.ok) {
+          parsed = await res.json();
+        }
+      } catch (e) {
+        console.warn('Backend parse-jd warning:', e);
+      }
 
-      const parsedCompany = jdCompany || (companyMatch ? companyMatch[1].trim() : '');
-      const parsedTitle = jdRole || (titleMatch ? titleMatch[1].trim() : '');
-      const parsedCutoff = parseFloat(jdCutoff) || (cutoffMatch ? parseFloat(cutoffMatch[1]) : 0);
+      const parsedCompany = (parsed?.company && parsed.company !== 'Unknown Organization')
+        ? parsed.company
+        : jdCompany.trim() || jdFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      const parsedTitle = parsed?.title || jdRole.trim() || 'Software Engineer';
+      const parsedCutoff = parseFloat(jdCutoff) || (parsed?.cgpaCutoff !== undefined && parsed?.cgpaCutoff !== null ? parsed.cgpaCutoff : 0);
 
       const newJd: OpportunityJD = {
         id: `uploaded-jd-${Date.now()}`,
         company: parsedCompany,
         title: parsedTitle,
-        function: 'Engineering',
-        location: '',
-        workArrangement: 'Hybrid',
-        experienceRange: '0 - 1 Years',
-        educationRequirement: 'Relevant Bachelor Degree',
+        function: parsed?.function || 'Engineering & Technology',
+        location: parsed?.location || '',
+        workArrangement: parsed?.workArrangement || 'Hybrid',
+        experienceRange: parsed?.experienceRange || '0 - 1 Years',
+        educationRequirement: parsed?.educationRequirement || 'Relevant Bachelor Degree',
         cgpaCutoff: parsedCutoff,
-        maxBacklogs: 0,
-        salaryRange: 'Competitive',
-        mustHaveSkills: ['Data Structures & Algorithms', 'JavaScript / TypeScript', 'React', 'Node.js', 'SQL'],
-        preferredSkills: ['Docker', 'AWS'],
-        goodToHaveSkills: ['System Design', 'Redis'],
-        keyResponsibilities: ['Develop features', 'Write unit and integration tests'],
-        ambiguousOrUncertainTerms: [],
+        maxBacklogs: parsed?.maxBacklogs ?? 0,
+        salaryRange: parsed?.salaryRange || 'Competitive',
+        mustHaveSkills: parsed?.mustHaveSkills && parsed.mustHaveSkills.length > 0 ? parsed.mustHaveSkills : ['Core Programming', 'Data Structures & Algorithms', 'Databases (SQL)'],
+        preferredSkills: parsed?.preferredSkills || ['System Design', 'Cloud Basics'],
+        goodToHaveSkills: parsed?.goodToHaveSkills || [],
+        keyResponsibilities: parsed?.keyResponsibilities || ['Develop features', 'Collaborate with team'],
+        ambiguousOrUncertainTerms: parsed?.ambiguousOrUncertainTerms || [],
         rawText: text,
       };
 
       setActiveJD(newJd);
       setJdCompany(parsedCompany);
       setJdRole(parsedTitle);
+      if (parsedCutoff > 0) setJdCutoff(String(parsedCutoff));
       setIsJdConfirmed(true);
     } catch (err) {
       console.error('Error confirming JD upload:', err);
@@ -603,35 +826,63 @@ Software Engineering Intern — CloudScale Labs (May 2024 - July 2024)
     if (jdFileInputRef.current) jdFileInputRef.current.value = '';
   };
 
-  const handleConfirmPastedJd = () => {
+  const handleConfirmPastedJd = async () => {
     if (!jdText.trim() && !jdRole.trim()) return;
-    const company = jdCompany.trim();
-    const title = jdRole.trim();
-    const cutoff = parseFloat(jdCutoff) || 0;
+    setIsJdProcessing(true);
+    try {
+      let parsed: any = null;
+      if (jdText.trim()) {
+        try {
+          const res = await fetch('/api/ai/parse-jd', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jdText: jdText.trim() }),
+          });
+          if (res.ok) {
+            parsed = await res.json();
+          }
+        } catch (e) {
+          console.warn('Backend parse-jd warning:', e);
+        }
+      }
 
-    const newJd: OpportunityJD = {
-      id: `pasted-jd-${Date.now()}`,
-      company,
-      title,
-      function: 'Engineering',
-      location: '',
-      workArrangement: 'Hybrid',
-      experienceRange: '0 - 1 Years',
-      educationRequirement: 'Relevant Bachelor Degree',
-      cgpaCutoff: cutoff,
-      maxBacklogs: 0,
-      salaryRange: 'Competitive',
-      mustHaveSkills: ['Data Structures & Algorithms', 'TypeScript', 'React', 'Node.js', 'SQL'],
-      preferredSkills: ['Docker'],
-      goodToHaveSkills: ['System Design'],
-      keyResponsibilities: ['Develop features', 'Collaborate with team'],
-      ambiguousOrUncertainTerms: [],
-      rawText: jdText,
-    };
+      const company = (parsed?.company && parsed.company !== 'Unknown Organization')
+        ? parsed.company
+        : jdCompany.trim() || 'Target Company';
+      const title = parsed?.title || jdRole.trim() || 'Software Engineer';
+      const cutoff = parseFloat(jdCutoff) || (parsed?.cgpaCutoff !== undefined && parsed?.cgpaCutoff !== null ? parsed.cgpaCutoff : 0);
 
-    setActiveJD(newJd);
-    setIsJdConfirmed(true);
-    setJdFileName('Custom Job Description');
+      const newJd: OpportunityJD = {
+        id: `pasted-jd-${Date.now()}`,
+        company,
+        title,
+        function: parsed?.function || 'Engineering & Technology',
+        location: parsed?.location || '',
+        workArrangement: parsed?.workArrangement || 'Hybrid',
+        experienceRange: parsed?.experienceRange || '0 - 1 Years',
+        educationRequirement: parsed?.educationRequirement || 'Relevant Bachelor Degree',
+        cgpaCutoff: cutoff,
+        maxBacklogs: parsed?.maxBacklogs ?? 0,
+        salaryRange: parsed?.salaryRange || 'Competitive',
+        mustHaveSkills: parsed?.mustHaveSkills && parsed.mustHaveSkills.length > 0 ? parsed.mustHaveSkills : ['Core Programming', 'Data Structures & Algorithms', 'Databases (SQL)'],
+        preferredSkills: parsed?.preferredSkills || ['System Design'],
+        goodToHaveSkills: parsed?.goodToHaveSkills || [],
+        keyResponsibilities: parsed?.keyResponsibilities || ['Develop features', 'Collaborate with team'],
+        ambiguousOrUncertainTerms: parsed?.ambiguousOrUncertainTerms || [],
+        rawText: jdText,
+      };
+
+      setActiveJD(newJd);
+      setJdCompany(company);
+      setJdRole(title);
+      if (cutoff > 0) setJdCutoff(String(cutoff));
+      setIsJdConfirmed(true);
+      setJdFileName('Custom Job Description');
+    } catch (err) {
+      console.error('Error confirming pasted JD:', err);
+    } finally {
+      setIsJdProcessing(false);
+    }
   };
 
   // Check if at least one document is available to analyze
@@ -649,83 +900,40 @@ Software Engineering Intern — CloudScale Labs (May 2024 - July 2024)
     try {
       const activeCvText = cvText.trim() || profile.resumeText || '';
 
-      // 1. If CV is provided, extract profile info, skills, projects
+      // 1. If CV is provided, extract full structured profile entities (Academics, Skills, Experiences, Projects)
       if (activeCvText) {
-        const nameMatch = activeCvText.match(/^([A-Z\s]{4,30})/m);
-        const emailMatch = activeCvText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
-        const phoneMatch = activeCvText.match(/(\+?[0-9\s-]{10,15})/);
+        const extracted = await extractCVData(activeCvText);
 
-        const detectedName = nameMatch ? nameMatch[1].trim() : profile.name;
-        const detectedEmail = emailMatch ? emailMatch[1].trim() : profile.email;
-        const detectedPhone = phoneMatch ? phoneMatch[1].trim() : profile.phone;
+        const detectedName = extracted.personalInfo?.name || profile.name;
+        const detectedEmail = extracted.personalInfo?.email || profile.email;
+        const detectedPhone = extracted.personalInfo?.phone || profile.phone;
 
-        const knownSkills = [
-          { name: 'Python', category: 'Languages & Frameworks' as const },
-          { name: 'JavaScript', category: 'Languages & Frameworks' as const },
-          { name: 'TypeScript', category: 'Languages & Frameworks' as const },
-          { name: 'React', category: 'Languages & Frameworks' as const },
-          { name: 'Node.js', category: 'Languages & Frameworks' as const },
-          { name: 'SQL', category: 'Databases' as const },
-          { name: 'PostgreSQL', category: 'Databases' as const },
-          { name: 'MongoDB', category: 'Databases' as const },
-          { name: 'Redis', category: 'Databases' as const },
-          { name: 'Docker', category: 'System & Cloud' as const },
-          { name: 'AWS', category: 'System & Cloud' as const },
-          { name: 'Data Structures & Algorithms', category: 'Core CS' as const },
-          { name: 'System Design', category: 'Core CS' as const },
-          { name: 'Git', category: 'System & Cloud' as const },
-        ];
-
-        const extractedSkills: SkillItem[] = knownSkills
-          .filter((k) => new RegExp(`\\b${k.name}\\b`, 'i').test(activeCvText))
-          .map((k, idx) => ({
-            id: `extracted-skill-${idx}-${Date.now()}`,
-            name: k.name,
-            category: k.category,
-            evidenceLevel: 2,
-            supportingEvidence: [`Extracted from CV (${cvFileName || 'Resume'})`],
-            relevance: 'Directly Relevant',
-            provenance: 'extracted',
-          }));
-
-        const extractedProjects: ProjectRecord[] = [];
-        if (/Distributed Event Stream|Event Stream/i.test(activeCvText)) {
-          extractedProjects.push({
-            id: `proj-stream-${Date.now()}`,
-            title: 'Distributed Event Stream Pipeline',
-            role: 'Backend Architect',
-            techStack: ['TypeScript', 'Node.js', 'Redis', 'PostgreSQL', 'Docker'],
-            description: 'High-throughput event streaming queue with rate limiting and backoff algorithms.',
-            outcomes: 'Sustained 8,500 req/sec with <20ms p99 latency.',
-            evidenceLevel: 3,
-            provenance: 'extracted',
-            verificationStatus: 'verified',
-          });
-        }
-        if (/Placement|Career Intelligence/i.test(activeCvText)) {
-          extractedProjects.push({
-            id: `proj-portal-${Date.now()}`,
-            title: 'Career Intelligence & Audit Portal',
-            role: 'Full Stack Engineer',
-            techStack: ['React', 'TypeScript', 'Tailwind CSS', 'REST APIs'],
-            description: 'Web application for student credential tracking and automated JD fit scoring.',
-            outcomes: 'Used by 450+ students with 100% deterministic test coverage.',
-            evidenceLevel: 2,
-            provenance: 'extracted',
-            verificationStatus: 'verified',
-          });
-        }
-
-        // Prevent duplicate skills and projects when same CV is re-uploaded
+        // Merge extracted skills
         const existingSkillNames = new Set((profile.skills || []).map((s) => s.name.toLowerCase()));
-        const newUniqueSkills = extractedSkills.filter((s) => !existingSkillNames.has(s.name.toLowerCase()));
-        const mergedSkills = [...(profile.skills || []), ...newUniqueSkills];
+        const newSkills = (extracted.skills || []).filter((s: any) => !existingSkillNames.has(s.name.toLowerCase()));
+        const mergedSkills = [...(profile.skills || []), ...newSkills];
 
+        // Merge extracted projects
         const existingProjectTitles = new Set((profile.projects || []).map((p) => p.title.toLowerCase()));
-        const newUniqueProjects = extractedProjects.filter((p) => !existingProjectTitles.has(p.title.toLowerCase()));
-        const mergedProjects = [...(profile.projects || []), ...newUniqueProjects];
+        const newProjects = (extracted.projects || []).filter((p: any) => !existingProjectTitles.has(p.title.toLowerCase()));
+        const mergedProjects = [...(profile.projects || []), ...newProjects];
 
-        updateProfile({
+        // Merge extracted experiences (internships)
+        const existingExpKeys = new Set((profile.experiences || []).map((e) => `${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+        const newExperiences = (extracted.experiences || []).filter((e: any) => !existingExpKeys.has(`${e.company.toLowerCase()}__${e.role.toLowerCase()}`));
+        const mergedExperiences = [...(profile.experiences || []), ...newExperiences];
+
+        // Merge certifications
+        const existingCertTitles = new Set((profile.certifications || []).map((c) => c.title.toLowerCase()));
+        const newCerts = (extracted.certifications || []).filter((c: any) => !existingCertTitles.has(c.title.toLowerCase()));
+        const mergedCerts = [...(profile.certifications || []), ...newCerts];
+
+        // Merge achievements
+        const existingAchTitles = new Set((profile.achievements || []).map((a) => a.title.toLowerCase()));
+        const newAchs = (extracted.achievements || []).filter((a: any) => !existingAchTitles.has(a.title.toLowerCase()));
+        const mergedAchs = [...(profile.achievements || []), ...newAchs];
+
+        const updatedProfilePayload: any = {
           name: detectedName || profile.name || 'Student',
           email: detectedEmail || profile.email,
           phone: detectedPhone || profile.phone,
@@ -733,26 +941,73 @@ Software Engineering Intern — CloudScale Labs (May 2024 - July 2024)
           resumeUrl: cvFileName ? `local://${cvFileName}` : profile.resumeUrl,
           skills: mergedSkills.length > 0 ? mergedSkills : profile.skills,
           projects: mergedProjects.length > 0 ? mergedProjects : profile.projects,
-        });
+          experiences: mergedExperiences.length > 0 ? mergedExperiences : profile.experiences,
+          certifications: mergedCerts.length > 0 ? mergedCerts : profile.certifications,
+          achievements: mergedAchs.length > 0 ? mergedAchs : profile.achievements,
+        };
+
+        if (extracted.personalInfo?.linkedInUrl && !profile.linkedInUrl) {
+          updatedProfilePayload.linkedInUrl = extracted.personalInfo.linkedInUrl;
+        }
+        if (extracted.personalInfo?.githubUrl && !profile.githubUrl) {
+          updatedProfilePayload.githubUrl = extracted.personalInfo.githubUrl;
+        }
+        if (extracted.class10) {
+          updatedProfilePayload.class10 = { ...profile.class10, ...extracted.class10 };
+        }
+        if (extracted.class12) {
+          updatedProfilePayload.class12 = { ...profile.class12, ...extracted.class12 };
+        }
+        if (extracted.postgraduate) {
+          updatedProfilePayload.postgraduate = { ...profile.postgraduate, ...extracted.postgraduate };
+        }
+
+        updateProfile(updatedProfilePayload);
+
+        // Update education fields if present
+        if (extracted.undergrad?.institution || extracted.undergrad?.cgpa) {
+          updateEducation({
+            institution: extracted.undergrad.institution || profile.education.institution,
+            degree: extracted.undergrad.degree || profile.education.degree,
+            branch: extracted.undergrad.branch || profile.education.branch,
+            verifiedCGPA: extracted.undergrad.cgpa || profile.education.verifiedCGPA,
+            selfReportedCGPA: extracted.undergrad.cgpa || profile.education.selfReportedCGPA,
+            expectedGraduationYear: extracted.undergrad.year || profile.education.expectedGraduationYear,
+          });
+        }
 
         // Trigger CV Gap Intelligence
         await triggerCVAnalysis(activeCvText);
 
-        // Check if there are unreviewed academics/links
-        prepareAndShowAcademicReview(activeCvText);
+        // Run Skills Matching & Industry-Wide Analysis Agent
+        if (hasJd && activeJD.company) {
+          try {
+            await fetch('/api/ai/agent/skills-match-analysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                profile: { ...profile, ...updatedProfilePayload },
+                cvText: activeCvText,
+                activeJD,
+              }),
+            });
+          } catch (agentErr) {
+            console.warn('Skills match agent background notice:', agentErr);
+          }
+        }
       }
 
       if (hasCv && hasJd) {
         setAnalysisMessage(
-          'Analysis complete! Your CV and target Job Description have been analyzed across skills, cutoff eligibility, and ATS alignment.'
+          `Analysis complete! Industry-wide skills check, internship alignment, and ATS readiness evaluated for ${activeJD.company} (${activeJD.title}).`
         );
       } else if (hasCv) {
         setAnalysisMessage(
-          'CV analysis complete! Extracted skills, academics, and projects have populated your profile.'
+          'CV analysis complete! Extracted skills, academics, internships, and projects have populated your profile.'
         );
       } else {
         setAnalysisMessage(
-          'Job Description analyzed! Target role criteria and required skills are updated.'
+          `Job Description analyzed! Target criteria and requirements for ${activeJD.company} (${activeJD.title}) are updated.`
         );
       }
     } catch (err) {

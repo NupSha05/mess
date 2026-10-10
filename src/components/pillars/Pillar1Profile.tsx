@@ -2,14 +2,9 @@ import React, { useState } from 'react';
 import { useCareerSaathi } from '../../context/CareerSaathiContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
-  calculateDeterministicCGPA,
-  calculateTargetFeasibility,
-} from '../../services/intelligenceEngine';
-import {
   User,
   GraduationCap,
   Briefcase,
-  FolderGit2,
   Zap,
   Award,
   Plus,
@@ -25,13 +20,11 @@ import {
   BookOpen,
   Calendar,
   FileText,
-  Calculator,
-  TrendingUp,
   AlertCircle,
   FileCheck,
   Layers,
 } from 'lucide-react';
-import { EvidenceLevel, AcademicTerm } from '../../types';
+import { EvidenceLevel } from '../../types';
 import {
   COURSE_MAJOR_MAPPING,
   COMMON_COLLEGES,
@@ -43,7 +36,6 @@ export const Pillar1Profile: React.FC = () => {
     profile,
     updateProfile,
     updateEducation,
-    addProject,
     addSkill,
   } = useCareerSaathi();
 
@@ -105,24 +97,6 @@ export const Pillar1Profile: React.FC = () => {
   const [editPgCgpa, setEditPgCgpa] = useState<string>(profile.postgraduate?.cgpa ? String(profile.postgraduate.cgpa) : '');
   const [editPgYear, setEditPgYear] = useState<number>(profile.postgraduate?.completionYear || 2026);
 
-  // Term Modal & Feasibility State
-  const [showAddTermModal, setShowAddTermModal] = useState(false);
-  const nextTermNumber = (profile.education.terms?.length || 0) + 1;
-  const [termNumber, setTermNumber] = useState<number>(nextTermNumber);
-  const [sgpaInput, setSgpaInput] = useState<string>('8.0');
-  const [creditsInput, setCreditsInput] = useState<string>('24');
-  const [targetCGPAInput, setTargetCGPAInput] = useState<number>(8.5);
-  const [activeSubTab, setActiveSubTab] = useState<'credentials' | 'academics-deep' | 'projects' | 'skills'>('credentials');
-
-  // Project Modal State
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [newProjTitle, setNewProjTitle] = useState('');
-  const [newProjRole, setNewProjRole] = useState('Solo Developer');
-  const [newProjTech, setNewProjTech] = useState('');
-  const [newProjDesc, setNewProjDesc] = useState('');
-  const [newProjOutcomes, setNewProjOutcomes] = useState('');
-  const [newProjLevel, setNewProjLevel] = useState<EvidenceLevel>(2);
-
   // Skill Modal State
   const [showAddSkillModal, setShowAddSkillModal] = useState(false);
   const [newSkillName, setNewSkillName] = useState('');
@@ -132,27 +106,10 @@ export const Pillar1Profile: React.FC = () => {
   const [newSkillLevel, setNewSkillLevel] = useState<EvidenceLevel>(2);
   const [newSkillEvidence, setNewSkillEvidence] = useState('');
 
+  const [activeSubTab, setActiveSubTab] = useState<'credentials' | 'skills'>('credentials');
+
   // Dynamic Major options for current course
   const majorsForSelectedCourse = getMajorsForCourse(editCourse);
-
-  // Calculations for Academic records
-  const termMetrics = calculateDeterministicCGPA(
-    profile.education.terms,
-    profile.education.totalSemesters || 8
-  );
-  const currentCalculatedCGPA =
-    profile.education.verifiedCGPA ||
-    profile.education.selfReportedCGPA ||
-    termMetrics.currentCalculatedCGPA ||
-    0;
-
-  const feasibilityResult = calculateTargetFeasibility(
-    currentCalculatedCGPA,
-    termMetrics.totalTermsCompleted,
-    profile.education.totalSemesters || 8,
-    targetCGPAInput,
-    profile.education.terms
-  );
 
   const handleOpenEditBasics = () => {
     setEditName(profile.name);
@@ -272,63 +229,6 @@ export const Pillar1Profile: React.FC = () => {
     });
 
     setShowEditBasicsModal(false);
-  };
-
-  const handleAddTerm = (e: React.FormEvent) => {
-    e.preventDefault();
-    const sgpa = parseFloat(sgpaInput);
-    const credits = parseFloat(creditsInput);
-    if (isNaN(sgpa) || isNaN(credits) || sgpa < 0 || sgpa > 10) return;
-
-    const newTerm: AcademicTerm = {
-      termNumber,
-      sgpa: Number(sgpa.toFixed(2)),
-      credits,
-      verified: true,
-    };
-
-    const existingTerms = profile.education.terms || [];
-    const updatedTerms = [...existingTerms.filter((t) => t.termNumber !== termNumber), newTerm].sort(
-      (a, b) => a.termNumber - b.termNumber
-    );
-
-    // Compute updated CGPA
-    const totalCredits = updatedTerms.reduce((sum, t) => sum + t.credits, 0);
-    const totalPoints = updatedTerms.reduce((sum, t) => sum + t.sgpa * t.credits, 0);
-    const newCgpa = totalCredits > 0 ? Number((totalPoints / totalCredits).toFixed(2)) : sgpa;
-
-    updateEducation({
-      terms: updatedTerms,
-      termsCompleted: updatedTerms.length,
-      currentSemester: Math.min(profile.education.totalSemesters || 8, updatedTerms.length + 1),
-      verifiedCGPA: newCgpa,
-      selfReportedCGPA: newCgpa,
-    });
-
-    setShowAddTermModal(false);
-    setTermNumber(updatedTerms.length + 1);
-  };
-
-  const handleCreateProject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProjTitle.trim()) return;
-
-    addProject({
-      title: newProjTitle.trim(),
-      role: newProjRole.trim(),
-      techStack: newProjTech.split(',').map((s) => s.trim()).filter(Boolean),
-      description: newProjDesc.trim(),
-      outcomes: newProjOutcomes.trim(),
-      evidenceLevel: newProjLevel,
-      provenance: 'user_provided',
-      verificationStatus: 'unverified',
-    });
-
-    setNewProjTitle('');
-    setNewProjTech('');
-    setNewProjDesc('');
-    setNewProjOutcomes('');
-    setShowAddProjectModal(false);
   };
 
   const handleCreateSkill = (e: React.FormEvent) => {
@@ -515,28 +415,6 @@ export const Pillar1Profile: React.FC = () => {
         >
           <GraduationCap className="w-4 h-4" />
           <span>Academic Credentials & Mapping</span>
-        </button>
-        <button
-          onClick={() => setActiveSubTab('academics-deep')}
-          className={`pb-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-            activeSubTab === 'academics-deep'
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Calculator className="w-4 h-4" />
-          <span>Semester Performance & Target Feasibility</span>
-        </button>
-        <button
-          onClick={() => setActiveSubTab('projects')}
-          className={`pb-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
-            activeSubTab === 'projects'
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FolderGit2 className="w-4 h-4" />
-          <span>Applied Projects ({profile.projects?.length || 0})</span>
         </button>
         <button
           onClick={() => setActiveSubTab('skills')}
@@ -870,179 +748,7 @@ export const Pillar1Profile: React.FC = () => {
         </div>
       )}
 
-      {/* SUB-TAB 2: Semester Performance & Target Feasibility (Merged from Pillar 2) */}
-      {activeSubTab === 'academics-deep' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Semester Breakdown */}
-            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-indigo-400" />
-                    Semester-by-Semester Audit & Credits
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Deterministic credit-weighted tracking. No hallucinated grades.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setTermNumber((profile.education.terms?.length || 0) + 1);
-                    setShowAddTermModal(true);
-                  }}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Semester Term
-                </button>
-              </div>
-
-              {/* Term Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(profile.education.terms || []).map((term) => (
-                  <div
-                    key={term.termNumber}
-                    className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs space-y-1"
-                  >
-                    <div className="flex justify-between items-center text-slate-400 text-[11px]">
-                      <span>Semester {term.termNumber}</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    </div>
-                    <span className="font-bold text-white text-base block">
-                      {term.sgpa.toFixed(2)}{' '}
-                      <span className="text-[10px] text-slate-500 font-normal">SGPA</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">{term.credits} Credits</span>
-                  </div>
-                ))}
-                {(!profile.education.terms || profile.education.terms.length === 0) && (
-                  <div className="col-span-4 p-8 text-center bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500">
-                    No semester marks records added yet. Use the 'Add Semester Term' button above or enter your Cumulative CGPA directly in Profile Basics.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Col: Target CGPA Feasibility Calculator */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">Target CGPA Feasibility</h3>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="text-slate-400 block mb-1">Target Cumulative CGPA:</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      max="10"
-                      value={targetCGPAInput}
-                      onChange={(e) => setTargetCGPAInput(parseFloat(e.target.value) || 0)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white font-bold"
-                    />
-                    <span className="text-slate-400 font-semibold">/ 10.0</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Required Future SGPA:</span>
-                    <span className="font-bold text-emerald-400 text-sm">
-                      {feasibilityResult.requiredAverageSGPA !== undefined
-                        ? feasibilityResult.requiredAverageSGPA.toFixed(2)
-                        : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Mathematical Status:</span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        feasibilityResult.isFeasible
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-rose-500/20 text-rose-300'
-                      }`}
-                    >
-                      {feasibilityResult.isFeasible ? 'Achievable' : 'Infeasible'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-slate-800">
-                    {feasibilityResult.explanation}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 3: Applied Projects */}
-      {activeSubTab === 'projects' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow">
-            <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <FolderGit2 className="w-4 h-4 text-purple-400" />
-                Applied Projects & Repositories ({profile.projects?.length || 0})
-              </h2>
-              <p className="text-xs text-slate-400">
-                Verified repositories and capstone deliverables with Level 0-4 evidence tiers.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddProjectModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add Project
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(profile.projects || []).map((project) => (
-              <div
-                key={project.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3"
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <h3 className="text-base font-bold text-white">{project.title}</h3>
-                    <span className="text-xs text-indigo-400 font-medium">{project.role}</span>
-                  </div>
-                  {getEvidenceBadge(project.evidenceLevel)}
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed">{project.description}</p>
-                {project.outcomes && (
-                  <p className="text-[11px] text-emerald-400 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                    🎯 Outcome: {project.outcomes}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {project.techStack.map((tech, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {(!profile.projects || profile.projects.length === 0) && (
-              <div className="col-span-2 p-10 text-center bg-slate-900 border border-slate-800 rounded-2xl text-xs text-slate-400 space-y-2">
-                <p className="font-semibold text-slate-300">No projects recorded yet.</p>
-                <p className="text-slate-500">
-                  Upload your CV in the Command Center Cockpit to automatically extract projects, or click 'Add Project' above.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 4: Technical Skills */}
+      {/* Technical Skills Sub-Tab */}
       {activeSubTab === 'skills' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow">
@@ -1583,164 +1289,6 @@ export const Pillar1Profile: React.FC = () => {
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow cursor-pointer"
                 >
                   Save Profile & Academic Record
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ADD TERM MODAL */}
-      {showAddTermModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Add Semester Record</h3>
-              <button onClick={() => setShowAddTermModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <form onSubmit={handleAddTerm} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-300 block mb-1">Semester Number</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={termNumber}
-                  onChange={(e) => setTermNumber(parseInt(e.target.value) || 1)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-slate-300 block mb-1">Semester SGPA (0 - 10)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="10"
-                  value={sgpaInput}
-                  onChange={(e) => setSgpaInput(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white font-bold"
-                />
-              </div>
-              <div>
-                <label className="text-slate-300 block mb-1">Semester Credits (e.g. 24)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="40"
-                  value={creditsInput}
-                  onChange={(e) => setCreditsInput(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddTermModal(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow"
-                >
-                  Record Semester
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ADD PROJECT MODAL */}
-      {showAddProjectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Add Applied Project</h3>
-              <button onClick={() => setShowAddProjectModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <form onSubmit={handleCreateProject} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-300 block mb-1 font-semibold">Project Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={newProjTitle}
-                  onChange={(e) => setNewProjTitle(e.target.value)}
-                  placeholder="e.g. Distributed Task Queue"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Your Role</label>
-                  <input
-                    type="text"
-                    value={newProjRole}
-                    onChange={(e) => setNewProjRole(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">Evidence Level</label>
-                  <select
-                    value={newProjLevel}
-                    onChange={(e) => setNewProjLevel(parseInt(e.target.value) as EvidenceLevel)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white cursor-pointer"
-                  >
-                    <option value={0}>L0: Self-Claim</option>
-                    <option value={1}>L1: Coursework / Theory</option>
-                    <option value={2}>L2: Public Git Repo</option>
-                    <option value={3}>L3: Internship / Capstone</option>
-                    <option value={4}>L4: Production Deployed</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-slate-300 block mb-1 font-semibold">Tech Stack (comma separated)</label>
-                <input
-                  type="text"
-                  value={newProjTech}
-                  onChange={(e) => setNewProjTech(e.target.value)}
-                  placeholder="Go, Redis, Docker, gRPC"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-slate-300 block mb-1 font-semibold">Description</label>
-                <textarea
-                  rows={2}
-                  value={newProjDesc}
-                  onChange={(e) => setNewProjDesc(e.target.value)}
-                  placeholder="Problem solved, architecture, and personal contributions..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="text-slate-300 block mb-1 font-semibold">Measurable Outcomes</label>
-                <input
-                  type="text"
-                  value={newProjOutcomes}
-                  onChange={(e) => setNewProjOutcomes(e.target.value)}
-                  placeholder="e.g. Handled 10,000 req/sec with <15ms p99 latency"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddProjectModal(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow"
-                >
-                  Add Project
                 </button>
               </div>
             </form>

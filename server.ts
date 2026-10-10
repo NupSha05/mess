@@ -260,10 +260,22 @@ app.post('/api/ai/extract-cv', async (req: Request, res: Response) => {
     if (!cvText) return res.status(400).json({ error: 'CV text is required' });
 
     const extracted = await AIService.extractCVEntities(cvText);
-    return res.json({ success: true, extracted });
+    return res.json({ success: true, extracted, ...(extracted || {}) });
   } catch (err: any) {
     console.error('Error in CV entity extraction:', err);
     return res.status(500).json({ error: 'Failed to extract CV entities', message: err.message });
+  }
+});
+
+// 4c. Skills Matching & Industry-Wide Analysis Agent
+app.post('/api/ai/agent/skills-match-analysis', async (req: Request, res: Response) => {
+  try {
+    const { profile, cvText, activeJD } = req.body;
+    const analysis = await AIService.runSkillsMatchAgent({ profile, cvText, activeJD });
+    return res.json({ success: true, analysis });
+  } catch (err: any) {
+    console.error('Error in skills match agent:', err);
+    return res.status(500).json({ error: 'Failed to run skills match agent', message: err.message });
   }
 });
 

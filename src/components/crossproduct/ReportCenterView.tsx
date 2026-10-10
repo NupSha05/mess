@@ -57,6 +57,55 @@ export const ReportCenterView: React.FC = () => {
   const projectSkills = skillsList.filter((s) => s.evidenceLevel === 2);
   const courseworkSkills = skillsList.filter((s) => s.evidenceLevel <= 1);
 
+  // Helper to resolve user evidence level for each target requirement
+  const resolveUserEvidence = (skillName: string) => {
+    const q = skillName.toLowerCase().trim();
+    const match = skillsList.find((s) => {
+      const sName = s.name.toLowerCase().trim();
+      return (
+        sName === q ||
+        sName.includes(q) ||
+        q.includes(sName) ||
+        (q.includes('dsa') && sName.includes('data structure')) ||
+        (q.includes('db') && sName.includes('database')) ||
+        (q.includes('sql') && (sName.includes('sql') || sName.includes('postgres')))
+      );
+    });
+    if (match) {
+      return {
+        level: match.evidenceLevel,
+        label: match.evidenceLevel >= 3 ? 'Level 3 (Production)' : match.evidenceLevel === 2 ? 'Level 2 (Projects)' : 'Level 1 (Coursework)',
+      };
+    }
+    const inProjects = projectsList.some((p) => p.techStack?.some((t) => t.toLowerCase().includes(q) || q.includes(t.toLowerCase())));
+    if (inProjects) return { level: 2, label: 'Level 2 (Projects)' };
+
+    const inExp = experiencesList.some((e) => e.skillsUsed?.some((t) => t.toLowerCase().includes(q) || q.includes(t.toLowerCase())));
+    if (inExp) return { level: 3, label: 'Level 3 (Production)' };
+
+    if (profile.resumeText && profile.resumeText.toLowerCase().includes(q)) {
+      return { level: 1, label: 'Level 1 (CV Stated)' };
+    }
+
+    return { level: 0, label: 'Level 0 (Unverified)' };
+  };
+
+  // Structured list of role skill requirements for printable dossier
+  const roleSkillRequirements = [
+    ...(activeJD.mustHaveSkills || []).slice(0, 5).map((s) => ({
+      name: s,
+      isMustHave: true,
+      reqLevel: 3,
+      reqLabel: 'Level 3+ (Must-Have)',
+    })),
+    ...(activeJD.preferredSkills || []).slice(0, 3).map((s) => ({
+      name: s,
+      isMustHave: false,
+      reqLevel: 2,
+      reqLabel: 'Level 2+ (Preferred)',
+    })),
+  ];
+
   // Direct In-Page Print Trigger
   const handlePrint = () => {
     try {
@@ -389,9 +438,47 @@ export const ReportCenterView: React.FC = () => {
       </div>
     </div>
 
-    <!-- 5. Target Job Roadmap -->
+    <!-- 5. Target Role Requirements Alignment Matrix -->
     <div class="section">
-      <div class="section-title">5. Priority Roadmap for ${activeJD.title || 'Target Role'} at ${activeJD.company || 'Target Organization'}</div>
+      <div class="section-title">5. Target Role Competency Requirements Alignment (${activeJD.company || 'Target Organization'})</div>
+      <div class="card">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10.5px;">
+          <thead>
+            <tr style="border-bottom: 1px solid #cbd5e1; text-align: left; color: #475569;">
+              <th style="padding: 4px 6px;">Skill Requirement</th>
+              <th style="padding: 4px 6px;">Target Expectation</th>
+              <th style="padding: 4px 6px;">Candidate Evidence</th>
+              <th style="padding: 4px 6px; text-align: right;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${roleSkillRequirements.map((req) => {
+              const userEv = resolveUserEvidence(req.name);
+              const isAligned = userEv.level >= req.reqLevel;
+              const isPartial = userEv.level > 0 && !isAligned;
+              return `
+                <tr style="border-bottom: 1px dotted #e2e8f0;">
+                  <td style="padding: 4px 6px; font-weight: 700; color: #0f172a;">${req.name}</td>
+                  <td style="padding: 4px 6px; color: ${req.isMustHave ? '#7c3aed' : '#475569'};">${req.reqLabel}</td>
+                  <td style="padding: 4px 6px; color: #1e293b;">${userEv.label}</td>
+                  <td style="padding: 4px 6px; text-align: right;">
+                    <span style="font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${
+                      isAligned ? '#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;' : isPartial ? '#fffbeb; color: #92400e; border: 1px solid #fde68a;' : '#fef2f2; color: #991b1b; border: 1px solid #fecaca;'
+                    }">
+                      ${isAligned ? '✓ Aligned' : isPartial ? '⚠ Partial' : '✗ Gap'}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 6. Target Job Roadmap -->
+    <div class="section">
+      <div class="section-title">6. Priority Roadmap for ${activeJD.title || 'Target Role'} at ${activeJD.company || 'Target Organization'}</div>
       <div class="card">
         ${actions.slice(0, 3).map((a, i) => `
           <div style="margin-bottom: 6px; padding-bottom: 6px; ${i < 2 ? 'border-bottom: 1px dotted #e2e8f0;' : ''}">
@@ -856,12 +943,65 @@ export const ReportCenterView: React.FC = () => {
           </div>
         </div>
 
+        {/* 5. Target Role Requirements Alignment Matrix */}
+        <div className="mb-6 page-break-avoid">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <Target className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-xs uppercase font-extrabold tracking-wider text-slate-900">
+              5. Target Role Competency Requirements Alignment ({activeJD.company || 'Target Organization'})
+            </h2>
+          </div>
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-300 text-[10px] font-bold uppercase text-slate-500">
+                  <th className="pb-2">Skill Requirement</th>
+                  <th className="pb-2">Target Expectation</th>
+                  <th className="pb-2">Candidate Evidence</th>
+                  <th className="pb-2 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-[11px]">
+                {roleSkillRequirements.map((req, idx) => {
+                  const ev = resolveUserEvidence(req.name);
+                  const isAligned = ev.level >= req.reqLevel;
+                  const isPartial = ev.level > 0 && !isAligned;
+                  return (
+                    <tr key={idx} className="hover:bg-slate-100/60 transition">
+                      <td className="py-2 font-bold text-slate-900 pr-2">{req.name}</td>
+                      <td className="py-2 text-slate-600 pr-2">
+                        <span className={`font-semibold ${req.isMustHave ? 'text-purple-700' : 'text-slate-600'}`}>
+                          {req.reqLabel}
+                        </span>
+                      </td>
+                      <td className="py-2 text-slate-700 pr-2">{ev.label}</td>
+                      <td className="py-2 text-right">
+                        <span
+                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${
+                            isAligned
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : isPartial
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-rose-50 text-rose-800 border-rose-200'
+                          }`}
+                        >
+                          {isAligned ? '✓ Aligned' : isPartial ? '⚠ Partial' : '✗ Gap'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* 6. Target Role Alignment & Top Priority Next Best Actions */}
         <div className="mb-6 page-break-avoid">
           <div className="flex items-center gap-1.5 mb-2.5">
             <Target className="w-4 h-4 text-indigo-600" />
             <h2 className="text-xs uppercase font-extrabold tracking-wider text-slate-900">
-              5. Role Alignment & Action Center Priorities ({activeJD.company || 'Target Organization'})
+              6. Role Alignment & Action Center Priorities ({activeJD.company || 'Target Organization'})
             </h2>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
