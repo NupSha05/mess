@@ -109,6 +109,61 @@ const CareerSaathiContext = createContext<CareerSaathiContextType | null>(null);
 
 const DEMO_MODE_FLAG = 'cs_demo_mode_active';
 
+export function ensureSafeProfile(p: Partial<StudentProfile>): StudentProfile {
+  return {
+    id: p.id || 'prod-student-01',
+    name: p.name || '',
+    email: p.email || '',
+    phone: p.phone || '',
+    college: p.college || '',
+    course: p.course || '',
+    headline: p.headline || '',
+    about: p.about || '',
+    careerStage: p.careerStage || 'Final Year Student',
+    linkedInUrl: p.linkedInUrl || '',
+    githubUrl: p.githubUrl || '',
+    portfolioUrl: p.portfolioUrl || '',
+    resumeUrl: p.resumeUrl || '',
+    resumeText: p.resumeText || '',
+    themePreference: p.themePreference || 'dark',
+    onboardingCompleted: p.onboardingCompleted ?? true,
+    class10: p.class10,
+    class12: p.class12,
+    postgraduate: p.postgraduate,
+    ...p,
+    education: {
+      id: p.education?.id || `edu-${p.id || 'std'}`,
+      institution: p.education?.institution || '',
+      degree: p.education?.degree || '',
+      course: p.education?.course || '',
+      branch: p.education?.branch || '',
+      startYear: p.education?.startYear || new Date().getFullYear() - 3,
+      expectedGraduationYear: p.education?.expectedGraduationYear || new Date().getFullYear() + 1,
+      expectedCompletionDate: p.education?.expectedCompletionDate || '',
+      currentSemester: p.education?.currentSemester || 1,
+      totalSemesters: p.education?.totalSemesters || 8,
+      selfReportedCGPA: p.education?.selfReportedCGPA || 0,
+      terms: Array.isArray(p.education?.terms) ? p.education.terms : [],
+      provenance: p.education?.provenance || 'user_provided',
+      verificationStatus: p.education?.verificationStatus || 'unverified',
+      ...(p.education || {}),
+    },
+    experiences: Array.isArray(p.experiences) ? p.experiences : [],
+    projects: Array.isArray(p.projects) ? p.projects : [],
+    skills: Array.isArray(p.skills) ? p.skills : [],
+    certifications: Array.isArray(p.certifications) ? p.certifications : [],
+    achievements: Array.isArray(p.achievements) ? p.achievements : [],
+    publications: Array.isArray(p.publications) ? p.publications : [],
+    preferences: p.preferences || {
+      targetRoles: [],
+      targetLocations: [],
+      preferredWorkType: 'Hybrid',
+      minAcceptableCTC: '',
+      targetIndustry: [],
+    },
+  };
+}
+
 export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 1. System Mode: Production vs Controlled Demo Mode
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
@@ -156,9 +211,9 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // 3. Persistent Application Data
   const [profile, setProfile] = useState<StudentProfile>(() => {
     if (localStorage.getItem(DEMO_MODE_FLAG) === 'true') {
-      return AARAV_SHARMA_DEMO_PROFILE;
+      return ensureSafeProfile(AARAV_SHARMA_DEMO_PROFILE);
     }
-    return createBlankProductionProfile();
+    return ensureSafeProfile(createBlankProductionProfile());
   });
 
   const [allJDs, setAllJDs] = useState<OpportunityJD[]>(() => {
@@ -268,16 +323,8 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Ensure student name and email are populated
         if (!studentProfile.name && userName) studentProfile.name = userName;
         if (!studentProfile.email && userEmail) studentProfile.email = userEmail;
-        if (!Array.isArray(studentProfile.education?.terms)) {
-          if (!studentProfile.education) (studentProfile as any).education = {};
-          studentProfile.education.terms = [];
-        }
-        if (!Array.isArray(studentProfile.skills)) studentProfile.skills = [];
-        if (!Array.isArray(studentProfile.projects)) studentProfile.projects = [];
-        if (!Array.isArray(studentProfile.experiences)) studentProfile.experiences = [];
-        if (!Array.isArray(studentProfile.certifications)) studentProfile.certifications = [];
         studentProfile.onboardingCompleted = true;
-        setProfile(studentProfile);
+        setProfile(ensureSafeProfile(studentProfile));
       } else {
         // Fallback to local storage or server profile cache
         const localKey = `careersaathi_profile_${userId}`;
@@ -287,15 +334,15 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
             const cached = JSON.parse(cachedRaw);
             if (cached) {
               cached.onboardingCompleted = true;
-              studentProfile = cached;
-              setProfile(cached);
+              studentProfile = ensureSafeProfile(cached);
+              setProfile(studentProfile);
             }
           } catch {}
         }
 
         if (!studentProfile) {
           // Initialize complete base profile from user credentials
-          const base = createBlankProductionProfile(userId);
+          const base = ensureSafeProfile(createBlankProductionProfile(userId));
           base.id = userId;
           base.email = userEmail;
           base.name = userName || userEmail.split('@')[0] || 'Student';
@@ -524,7 +571,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // 7. Traceability & Mutation Methods
   const logEventImpact = (eventType: string, sourcePillar: string, affected: string[], explanation: string) => {
     const newRecord: EventImpactRecord = {
-      id: `ev-${Date.now()}`,
+      id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date().toISOString(),
       eventType,
       sourcePillar,
@@ -541,7 +588,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const updateProfile = (updated: Partial<StudentProfile>) => {
     setProfile((prev) => {
-      const next = { ...prev, ...updated };
+      const next = ensureSafeProfile({ ...prev, ...updated });
       const uid = currentAuthUser?.id || prev.id;
       if (!isDemoMode && uid) {
         dbService.upsertStudentProfile(uid, next).catch((err) =>
@@ -562,7 +609,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const updateEducation = (edu: Partial<StudentProfile['education']>) => {
     setProfile((prev) => {
       const newEdu = { ...prev.education, ...edu };
-      const next = { ...prev, education: newEdu };
+      const next = ensureSafeProfile({ ...prev, education: newEdu });
       const uid = currentAuthUser?.id || prev.id;
       if (!isDemoMode && uid) {
         dbService.upsertEducation(uid, prev.id, newEdu).catch((err) =>
@@ -581,21 +628,25 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const addProject = (proj: Omit<StudentProfile['projects'][0], 'id'>) => {
-    const tempId = `proj-${Date.now()}`;
+    const tempId = `proj-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newProj = { ...proj, id: tempId };
 
-    setProfile((prev) => ({
-      ...prev,
-      projects: [newProj, ...prev.projects],
-    }));
+    setProfile((prev) =>
+      ensureSafeProfile({
+        ...prev,
+        projects: [newProj, ...(prev.projects || [])],
+      })
+    );
 
     const uid = currentAuthUser?.id || profile.id;
     if (!isDemoMode && uid) {
       dbService.addProjectToDb(uid, profile.id, proj).then((dbId) => {
-        setProfile((prev) => ({
-          ...prev,
-          projects: prev.projects.map((p) => (p.id === tempId ? { ...p, id: dbId } : p)),
-        }));
+        setProfile((prev) =>
+          ensureSafeProfile({
+            ...prev,
+            projects: (prev.projects || []).map((p) => (p.id === tempId ? { ...p, id: dbId } : p)),
+          })
+        );
       }).catch((err) => console.error('Failed to persist project:', err));
     }
 
@@ -608,21 +659,25 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const addSkill = (skill: Omit<StudentProfile['skills'][0], 'id'>) => {
-    const tempId = `sk-${Date.now()}`;
+    const tempId = `sk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newSkill = { ...skill, id: tempId };
 
-    setProfile((prev) => ({
-      ...prev,
-      skills: [...prev.skills, newSkill],
-    }));
+    setProfile((prev) =>
+      ensureSafeProfile({
+        ...prev,
+        skills: [...(prev.skills || []), newSkill],
+      })
+    );
 
     const uid = currentAuthUser?.id || profile.id;
     if (!isDemoMode && uid) {
       dbService.addSkillToDb(uid, profile.id, skill).then((dbId) => {
-        setProfile((prev) => ({
-          ...prev,
-          skills: prev.skills.map((s) => (s.id === tempId ? { ...s, id: dbId } : s)),
-        }));
+        setProfile((prev) =>
+          ensureSafeProfile({
+            ...prev,
+            skills: (prev.skills || []).map((s) => (s.id === tempId ? { ...s, id: dbId } : s)),
+          })
+        );
       }).catch((err) => console.error('Failed to persist skill:', err));
     }
 
@@ -673,7 +728,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const prevStage = app.stage;
         const newHistory = [...app.history, { stage: newStage, timestamp: now, comment: note }];
         const newEvent: ApplicationEvent = {
-          id: `ev-app-${Date.now()}`,
+          id: `ev-app-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           applicationId: app.id,
           previousStage: prevStage,
           newStage,
@@ -732,10 +787,10 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const addApplication = (appData: Omit<ApplicationRecord, 'id' | 'healthCategory' | 'healthRationale' | 'history' | 'stageUpdatedDate'>) => {
-    const tempId = `app-${Date.now()}`;
+    const tempId = `app-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const now = new Date().toISOString();
     const initialEvent: ApplicationEvent = {
-      id: `ev-app-${Date.now()}`,
+      id: `ev-app-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       applicationId: tempId,
       previousStage: null,
       newStage: appData.stage,
@@ -776,7 +831,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const recordPracticeSession = (sessionData: Omit<PracticeSession, 'id' | 'completedAt'>) => {
-    const tempId = `prac-${Date.now()}`;
+    const tempId = `prac-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
     const newSession: PracticeSession = {
       ...sessionData,
@@ -805,7 +860,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const reconcileDiscrepancy = (authoritativeValue: number) => {
     setProfile((prev) => {
-      const next = {
+      const next = ensureSafeProfile({
         ...prev,
         education: {
           ...prev.education,
@@ -815,7 +870,7 @@ export const CareerSaathiProvider: React.FC<{ children: React.ReactNode }> = ({ 
           verificationStatus: 'verified' as const,
           provenance: 'verified' as const,
         },
-      };
+      });
 
       if (!isDemoMode && currentAuthUser?.id && isSupabaseConfigured()) {
         dbService.upsertEducation(currentAuthUser.id, prev.id, next.education).catch((err) =>

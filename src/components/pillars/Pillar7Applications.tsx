@@ -319,9 +319,9 @@ export const Pillar7Applications: React.FC = () => {
                     Verified Stage Transitions & Events ({app.events?.length || app.history?.length || 1}):
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {(app.events || []).map((ev) => (
+                    {(app.events || []).map((ev, evIdx) => (
                       <div
-                        key={ev.id}
+                        key={`${ev.id || 'ev'}-${evIdx}`}
                         className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-[11px] text-slate-300 flex items-center gap-1.5"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />

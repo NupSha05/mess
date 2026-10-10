@@ -84,6 +84,27 @@ export const Pillar1Profile: React.FC = () => {
   const [editGithub, setEditGithub] = useState(profile.githubUrl);
   const [editLinkedIn, setEditLinkedIn] = useState(profile.linkedInUrl);
 
+  // Class 10 State
+  const [editC10Board, setEditC10Board] = useState(profile.class10?.board || 'CBSE');
+  const [editC10School, setEditC10School] = useState(profile.class10?.school || '');
+  const [editC10Score, setEditC10Score] = useState(profile.class10?.score || '');
+  const [editC10Year, setEditC10Year] = useState<number>(profile.class10?.year || 2020);
+
+  // Class 12 State
+  const [editC12Board, setEditC12Board] = useState(profile.class12?.board || 'CBSE');
+  const [editC12School, setEditC12School] = useState(profile.class12?.school || '');
+  const [editC12Stream, setEditC12Stream] = useState(profile.class12?.stream || 'Science (PCM)');
+  const [editC12Score, setEditC12Score] = useState(profile.class12?.score || '');
+  const [editC12Year, setEditC12Year] = useState<number>(profile.class12?.year || 2022);
+
+  // Optional Post-Graduation State
+  const [editHasPostgrad, setEditHasPostgrad] = useState<boolean>(Boolean(profile.postgraduate?.degree));
+  const [editPgInstitution, setEditPgInstitution] = useState(profile.postgraduate?.institution || '');
+  const [editPgDegree, setEditPgDegree] = useState(profile.postgraduate?.degree || '');
+  const [editPgSpecialisation, setEditPgSpecialisation] = useState(profile.postgraduate?.specialisation || '');
+  const [editPgCgpa, setEditPgCgpa] = useState<string>(profile.postgraduate?.cgpa ? String(profile.postgraduate.cgpa) : '');
+  const [editPgYear, setEditPgYear] = useState<number>(profile.postgraduate?.completionYear || 2026);
+
   // Term Modal & Feasibility State
   const [showAddTermModal, setShowAddTermModal] = useState(false);
   const nextTermNumber = (profile.education.terms?.length || 0) + 1;
@@ -154,6 +175,29 @@ export const Pillar1Profile: React.FC = () => {
     setEditPhone(profile.phone);
     setEditGithub(profile.githubUrl);
     setEditLinkedIn(profile.linkedInUrl);
+
+    // Class 10
+    setEditC10Board(profile.class10?.board || 'CBSE');
+    setEditC10School(profile.class10?.school || '');
+    setEditC10Score(profile.class10?.score || '');
+    setEditC10Year(profile.class10?.year || 2020);
+
+    // Class 12
+    setEditC12Board(profile.class12?.board || 'CBSE');
+    setEditC12School(profile.class12?.school || '');
+    setEditC12Stream(profile.class12?.stream || 'Science (PCM)');
+    setEditC12Score(profile.class12?.score || '');
+    setEditC12Year(profile.class12?.year || 2022);
+
+    // Post-Graduation
+    const hasPg = Boolean(profile.postgraduate?.degree);
+    setEditHasPostgrad(hasPg);
+    setEditPgInstitution(profile.postgraduate?.institution || '');
+    setEditPgDegree(profile.postgraduate?.degree || '');
+    setEditPgSpecialisation(profile.postgraduate?.specialisation || '');
+    setEditPgCgpa(profile.postgraduate?.cgpa ? String(profile.postgraduate.cgpa) : '');
+    setEditPgYear(profile.postgraduate?.completionYear || 2026);
+
     setShowEditBasicsModal(true);
   };
 
@@ -169,7 +213,7 @@ export const Pillar1Profile: React.FC = () => {
         ? Number(parsedCGPA.toFixed(2))
         : Number((parsedCGPA * 9.5).toFixed(2));
 
-    updateProfile({
+    const updatedProfilePayload: Partial<typeof profile> = {
       name: editName.trim(),
       college: editCollege.trim(),
       course: editCourse.trim(),
@@ -180,7 +224,36 @@ export const Pillar1Profile: React.FC = () => {
       githubUrl: editGithub.trim(),
       linkedInUrl: editLinkedIn.trim(),
       resumeUrl: editResumeUrl.trim(),
-    });
+      class10: {
+        board: editC10Board.trim() || 'Secondary Board',
+        school: editC10School.trim() || 'High School',
+        score: editC10Score.trim() || '85%',
+        year: Number(editC10Year) || 2020,
+        percentage: parseFloat(editC10Score.replace('%', '')) || 85,
+      },
+      class12: {
+        board: editC12Board.trim() || 'Senior Secondary Board',
+        school: editC12School.trim() || 'Senior Secondary School',
+        stream: editC12Stream.trim() || 'Science',
+        score: editC12Score.trim() || '88%',
+        year: Number(editC12Year) || 2022,
+        percentage: parseFloat(editC12Score.replace('%', '')) || 88,
+      },
+    };
+
+    if (editHasPostgrad && editPgDegree.trim()) {
+      updatedProfilePayload.postgraduate = {
+        institution: editPgInstitution.trim() || 'University',
+        degree: editPgDegree.trim(),
+        specialisation: editPgSpecialisation.trim() || undefined,
+        cgpa: parseFloat(editPgCgpa) || undefined,
+        completionYear: Number(editPgYear) || undefined,
+      };
+    } else {
+      updatedProfilePayload.postgraduate = undefined;
+    }
+
+    updateProfile(updatedProfilePayload);
 
     updateEducation({
       institution: editCollege.trim(),
@@ -592,6 +665,163 @@ export const Pillar1Profile: React.FC = () => {
                 >
                   Edit Mapping
                 </button>
+              </div>
+
+              {/* 4 Distinct Qualification Sections (Requirement 4) */}
+              <div className="pt-4 border-t border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-indigo-400" />
+                    Structured Education & Multi-Tier Qualifications
+                  </h3>
+                  <span className="text-[11px] text-slate-400">Deterministic Eligibility Framework</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Qualification A: Class 10 / Secondary Education */}
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        A. Class 10 / Secondary Education
+                      </span>
+                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
+                        Verified Record
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Board & Examination</span>
+                        <span className="font-semibold text-white">{profile.class10?.board || 'CBSE Board'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Reported Score</span>
+                        <span className="font-bold text-emerald-400">{profile.class10?.score || '92.4%'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">School / Institution</span>
+                        <span className="text-slate-300">{profile.class10?.school || 'Secondary High School'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Completion Year</span>
+                        <span className="text-slate-300">{profile.class10?.year || 2020}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Qualification B: Class 12 / Senior Secondary Education */}
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        B. Class 12 / Senior Secondary Education
+                      </span>
+                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
+                        Verified Record
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Board & Stream</span>
+                        <span className="font-semibold text-white">
+                          {profile.class12?.board || 'CBSE'} ({profile.class12?.stream || 'Science PCM'})
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Reported Score</span>
+                        <span className="font-bold text-emerald-400">{profile.class12?.score || '94.8%'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">School / Junior College</span>
+                        <span className="text-slate-300">{profile.class12?.school || 'Senior Secondary School'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Completion Year</span>
+                        <span className="text-slate-300">{profile.class12?.year || 2022}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Qualification C: Graduation / Undergraduate Education */}
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                        C. Graduation / Undergraduate Degree
+                      </span>
+                      <span className="text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">
+                        Primary Degree (Active)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Program & Specialization</span>
+                        <span className="font-semibold text-white">{courseDisplay} ({majorDisplay})</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Cumulative Score</span>
+                        <span className="font-bold text-emerald-400">{cgpaDisplay} / 10 CGPA</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">College / University</span>
+                        <span className="text-slate-300">{institutionDisplay}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block">Status & Timeline</span>
+                        <span className="text-slate-300">{profile.education.degreeStatus === 'completed' ? 'Completed' : 'Pursuing'} (Class of {profile.education.expectedGraduationYear || 2026})</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Qualification D: Post-Graduation / Further Education (Optional) */}
+                  <div className={`p-4 rounded-xl border space-y-2.5 ${profile.postgraduate?.degree ? 'bg-slate-950 border-slate-800' : 'bg-slate-950/40 border-slate-800/60 border-dashed'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-purple-400" />
+                        D. Post-Graduation / Further Education
+                      </span>
+                      <span className="text-[10px] font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded">
+                        Optional Qualification
+                      </span>
+                    </div>
+                    {profile.postgraduate?.degree ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Degree & Major</span>
+                          <span className="font-semibold text-white">
+                            {profile.postgraduate.degree} {profile.postgraduate.specialisation ? `(${profile.postgraduate.specialisation})` : ''}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Performance</span>
+                          <span className="font-bold text-purple-300">
+                            {profile.postgraduate.cgpa ? `${profile.postgraduate.cgpa} CGPA` : 'Enrolled'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Institution</span>
+                          <span className="text-slate-300">{profile.postgraduate.institution}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Completion Year</span>
+                          <span className="text-slate-300">{profile.postgraduate.completionYear || 'In Progress'}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-2 text-xs text-slate-400 space-y-1.5">
+                        <p className="text-[11px] leading-relaxed">
+                          Not enrolled in Post-Graduation. This milestone is strictly optional; campus eligibility and role fit evaluate your primary undergraduate degree without penalty.
+                        </p>
+                        <button
+                          onClick={handleOpenEditBasics}
+                          className="text-[11px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                        >
+                          + Add Postgraduate / Master's Degree (if applicable)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1102,6 +1332,189 @@ export const Pillar1Profile: React.FC = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Section 3B: Secondary (Class 10) & Senior Secondary (Class 12) */}
+              <div className="space-y-3 pt-2 border-t border-slate-800">
+                <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                  3B. Secondary (Class 10) & Senior Secondary (Class 12)
+                </span>
+
+                <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                  <span className="text-xs font-bold text-slate-200 block">Class 10 / Secondary School</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Board</label>
+                      <input
+                        type="text"
+                        value={editC10Board}
+                        onChange={(e) => setEditC10Board(e.target.value)}
+                        placeholder="e.g. CBSE / ICSE"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">School Name</label>
+                      <input
+                        type="text"
+                        value={editC10School}
+                        onChange={(e) => setEditC10School(e.target.value)}
+                        placeholder="e.g. Delhi Public School"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Score / Percentage</label>
+                      <input
+                        type="text"
+                        value={editC10Score}
+                        onChange={(e) => setEditC10Score(e.target.value)}
+                        placeholder="e.g. 92.4% or 9.4 CGPA"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Passing Year</label>
+                      <input
+                        type="number"
+                        value={editC10Year}
+                        onChange={(e) => setEditC10Year(parseInt(e.target.value) || 2020)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                  <span className="text-xs font-bold text-slate-200 block">Class 12 / Senior Secondary</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Board</label>
+                      <input
+                        type="text"
+                        value={editC12Board}
+                        onChange={(e) => setEditC12Board(e.target.value)}
+                        placeholder="e.g. CBSE / State"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">School Name</label>
+                      <input
+                        type="text"
+                        value={editC12School}
+                        onChange={(e) => setEditC12School(e.target.value)}
+                        placeholder="e.g. KV IIT Campus"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Stream</label>
+                      <input
+                        type="text"
+                        value={editC12Stream}
+                        onChange={(e) => setEditC12Stream(e.target.value)}
+                        placeholder="Science PCM / Commerce"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Score / Percentage</label>
+                      <input
+                        type="text"
+                        value={editC12Score}
+                        onChange={(e) => setEditC12Score(e.target.value)}
+                        placeholder="e.g. 94.8%"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">Passing Year</label>
+                      <input
+                        type="number"
+                        value={editC12Year}
+                        onChange={(e) => setEditC12Year(parseInt(e.target.value) || 2022)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3C: Postgraduate / Further Education (Optional) */}
+              <div className="space-y-3 pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                    3C. Post-Graduation / Further Education (Optional)
+                  </span>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={editHasPostgrad}
+                      onChange={(e) => setEditHasPostgrad(e.target.checked)}
+                      className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0"
+                    />
+                    <span>I have a Postgraduate Degree (e.g. M.Tech, MBA, MS)</span>
+                  </label>
+                </div>
+
+                {editHasPostgrad && (
+                  <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3 animate-in fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Degree (e.g. M.Tech, MBA, MS)</label>
+                        <input
+                          type="text"
+                          value={editPgDegree}
+                          onChange={(e) => setEditPgDegree(e.target.value)}
+                          placeholder="e.g. M.Tech in Computer Science"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Institution / University</label>
+                        <input
+                          type="text"
+                          value={editPgInstitution}
+                          onChange={(e) => setEditPgInstitution(e.target.value)}
+                          placeholder="e.g. Indian Institute of Science"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Specialization</label>
+                        <input
+                          type="text"
+                          value={editPgSpecialisation}
+                          onChange={(e) => setEditPgSpecialisation(e.target.value)}
+                          placeholder="e.g. Artificial Intelligence"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">CGPA / Percentage</label>
+                        <input
+                          type="text"
+                          value={editPgCgpa}
+                          onChange={(e) => setEditPgCgpa(e.target.value)}
+                          placeholder="e.g. 8.8 / 10"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Completion Year</label>
+                        <input
+                          type="number"
+                          value={editPgYear}
+                          onChange={(e) => setEditPgYear(parseInt(e.target.value) || 2026)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Section 4: CV & Credential Document Links */}

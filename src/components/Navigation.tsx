@@ -40,14 +40,13 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
     { id: 'command-center' as TabType, label: 'Command Center', icon: LayoutDashboard, badge: 'Cockpit' },
     { id: 'pillar-1-profile' as TabType, label: '1. Profile & Academics', icon: User, subtitle: 'Credentials & Evidence' },
     { id: 'pillar-3-career' as TabType, label: '2. Career & Skills', icon: Target, subtitle: 'Evidence Levels 0-4' },
-    { id: 'pillar-4-opportunity' as TabType, label: '3. JD & Role Fit', icon: Briefcase, subtitle: 'Rules + Semantic' },
-    { id: 'pillar-5-cv' as TabType, label: '4. CV Intelligence', icon: FileText, subtitle: '3-Way Gaps' },
-    { id: 'pillar-6-linkedin' as TabType, label: '5. LinkedIn Intel', icon: Linkedin, subtitle: 'Recruiter Visibility' },
-    { id: 'pillar-7-applications' as TabType, label: '6. Applications', icon: Send, subtitle: 'Lifecycle Funnel' },
-    { id: 'pillar-8-practice' as TabType, label: '7. Practice Coach', icon: MessageSquareCode, subtitle: 'STAR Rubrics' },
-    { id: 'pillar-9-readiness' as TabType, label: '8. Readiness Intel', icon: LineChart, subtitle: 'Event Impact' },
-    { id: 'action-center' as TabType, label: 'Action Center', icon: CheckSquare, badge: 'Prioritized' },
-    { id: 'report-center' as TabType, label: 'Profile Analysis & Export', icon: FileDown, subtitle: 'Mail & Audit' },
+    { id: 'pillar-4-opportunity' as TabType, label: '3. CV & Job Match Intel', icon: Briefcase, badge: 'Unified' },
+    { id: 'pillar-6-linkedin' as TabType, label: '4. LinkedIn Intel', icon: Linkedin, subtitle: 'Recruiter Visibility' },
+    { id: 'pillar-7-applications' as TabType, label: '5. Applications', icon: Send, subtitle: 'Lifecycle Funnel' },
+    { id: 'pillar-8-practice' as TabType, label: '6. Practice Coach', icon: MessageSquareCode, subtitle: 'STAR Rubrics' },
+    { id: 'pillar-9-readiness' as TabType, label: '7. Readiness Intel', icon: LineChart, subtitle: 'Event Impact' },
+    { id: 'action-center' as TabType, label: 'Action Center', icon: CheckSquare, badge: 'Roadmap' },
+    { id: 'report-center' as TabType, label: 'Profile Analysis & Export', icon: FileDown, subtitle: 'PDF & Audit' },
   ];
 
   return (

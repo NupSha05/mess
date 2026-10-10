@@ -7,8 +7,7 @@ import { CommandCenter } from './components/pillars/CommandCenter';
 import { Pillar1Profile } from './components/pillars/Pillar1Profile';
 import { Pillar2Academics } from './components/pillars/Pillar2Academics';
 import { Pillar3CareerIntelligence } from './components/pillars/Pillar3CareerIntelligence';
-import { Pillar4OpportunityJD } from './components/pillars/Pillar4OpportunityJD';
-import { Pillar5CVIntelligence } from './components/pillars/Pillar5CVIntelligence';
+import { CVJobMatchIntelligence } from './components/pillars/CVJobMatchIntelligence';
 import { Pillar6LinkedInIntelligence } from './components/pillars/Pillar6LinkedInIntelligence';
 import { Pillar7Applications } from './components/pillars/Pillar7Applications';
 import { Pillar8PracticeCoach } from './components/pillars/Pillar8PracticeCoach';
@@ -34,9 +33,8 @@ function WorkspaceLayout() {
       case 'pillar-3-career':
         return <Pillar3CareerIntelligence />;
       case 'pillar-4-opportunity':
-        return <Pillar4OpportunityJD />;
       case 'pillar-5-cv':
-        return <Pillar5CVIntelligence />;
+        return <CVJobMatchIntelligence />;
       case 'pillar-6-linkedin':
         return <Pillar6LinkedInIntelligence />;
       case 'pillar-7-applications':

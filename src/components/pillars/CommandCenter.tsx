@@ -716,14 +716,23 @@ Software Engineering Intern — CloudScale Labs (May 2024 - July 2024)
           });
         }
 
+        // Prevent duplicate skills and projects when same CV is re-uploaded
+        const existingSkillNames = new Set((profile.skills || []).map((s) => s.name.toLowerCase()));
+        const newUniqueSkills = extractedSkills.filter((s) => !existingSkillNames.has(s.name.toLowerCase()));
+        const mergedSkills = [...(profile.skills || []), ...newUniqueSkills];
+
+        const existingProjectTitles = new Set((profile.projects || []).map((p) => p.title.toLowerCase()));
+        const newUniqueProjects = extractedProjects.filter((p) => !existingProjectTitles.has(p.title.toLowerCase()));
+        const mergedProjects = [...(profile.projects || []), ...newUniqueProjects];
+
         updateProfile({
           name: detectedName || profile.name || 'Student',
           email: detectedEmail || profile.email,
           phone: detectedPhone || profile.phone,
           resumeText: activeCvText,
           resumeUrl: cvFileName ? `local://${cvFileName}` : profile.resumeUrl,
-          skills: extractedSkills.length > 0 ? extractedSkills : profile.skills,
-          projects: extractedProjects.length > 0 ? extractedProjects : profile.projects,
+          skills: mergedSkills.length > 0 ? mergedSkills : profile.skills,
+          projects: mergedProjects.length > 0 ? mergedProjects : profile.projects,
         });
 
         // Trigger CV Gap Intelligence

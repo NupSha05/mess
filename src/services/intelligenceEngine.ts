@@ -57,8 +57,8 @@ export function calculateDeterministicCGPA(terms: AcademicTerm[], totalSemesters
   if (terms.length >= 2) {
     const last = terms[terms.length - 1].sgpa;
     const prev = terms[terms.length - 2].sgpa;
-    if (last > prev + 0.15) trajectory = 'Rising';
-    else if (last < prev - 0.15) trajectory = 'Declining';
+    if (last > prev + 0.05) trajectory = 'Rising';
+    else if (last < prev - 0.05) trajectory = 'Declining';
   }
 
   return {
@@ -763,174 +763,317 @@ export function calculateReadiness(
   };
 }
 
-// 6. ACTION CENTER PRIORITIZATION & CAREER ROADMAP (Requirement 12)
+// 6. ACTION CENTER PRIORITIZATION & CAREER ROADMAP (Blueprint Section 9)
 export function generatePrioritizedActions(
   profile: StudentProfile,
   readiness: ReadinessDimensions,
   targetJD?: OpportunityJD
 ): NextBestAction[] {
   const actions: NextBestAction[] = [];
+  const registeredSkillNames = (profile.skills || []).map((s) => s.name.toLowerCase());
+  const resumeTextLower = (profile.resumeText || '').toLowerCase();
 
-  // If profile is incomplete, surface foundational setup actions first
-  if (!profile.education.institution || (profile.education.selfReportedCGPA === 0 && (!profile.education.terms || profile.education.terms.length === 0))) {
-    actions.push({
-      id: 'act-setup-academics',
-      title: 'Record Academic Terms & Compute CGPA',
-      description: 'Enter your degree, branch, and semester SGPA history to unlock deterministic eligibility checks.',
-      impact: 'High Impact',
-      effort: 'Quick Win (<15m)',
-      urgency: 'Immediate',
-      pillarTarget: 'Pillar 2: Academic Intelligence',
-      targetModule: 'Pillar 2: Academic Intelligence',
-      triggeringFinding: 'Missing semester records prevent accurate eligibility cutoffs.',
-      expectedOutcome: 'Unlocks automated campus threshold evaluation and grade trajectory trends.',
-      rationale: 'Campus cutoffs depend directly on deterministic credit-weighted academic calculations.',
-      isCompleted: false,
-    });
-  }
-
-  if (profile.skills.length === 0) {
-    actions.push({
-      id: 'act-add-skills',
-      title: 'Register Core Technical Skills & Evidence',
-      description: 'Add your primary technical capabilities with supporting coursework or project evidence to establish your Skill Readiness dimension.',
-      impact: 'High Impact',
-      effort: 'Quick Win (<15m)',
-      urgency: 'Immediate',
-      pillarTarget: 'Pillar 3: Career & Profile Intelligence',
-      targetModule: 'Pillar 3: Career & Profile Intelligence',
-      triggeringFinding: 'Zero registered skills in student profile.',
-      expectedOutcome: 'Establishes initial Skill Readiness index and activates role matching.',
-      rationale: 'Required for calculating accurate role fit and opportunity eligibility.',
-      isCompleted: false,
-    });
-  }
-
-  // If transcript discrepancy
-  if (profile.education.discrepancyFlag) {
-    actions.push({
-      id: 'act-reconcile-cgpa',
-      title: 'Reconcile Academic Discrepancy',
-      description: 'Your self-reported CGPA differs from extracted transcript data. Reconcile this to unlock unblocked eligibility.',
-      impact: 'High Impact',
-      effort: 'Quick Win (<15m)',
-      urgency: 'Immediate',
-      pillarTarget: 'Pillar 2: Academic Intelligence',
-      targetModule: 'Pillar 2: Academic Intelligence',
-      triggeringFinding: 'Self-reported CGPA diverges from official transcript record.',
-      expectedOutcome: 'Restores verified academic provenance for campus recruitment audits.',
-      rationale: 'Automated campus screening filters out unverified discrepancies immediately.',
-      isCompleted: false,
-    });
-  }
-
-  // If missing must have skills in JD
-  if (targetJD && targetJD.mustHaveSkills?.length > 0) {
-    const missing = targetJD.mustHaveSkills.filter(
-      (m) => !profile.skills.some((s) => s.name.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(s.name.toLowerCase()))
+  // Helper to check if skill exists in projects or experiences
+  const skillInPortfolio = (skill: string) => {
+    const sLower = skill.toLowerCase();
+    const inProj = (profile.projects || []).some(
+      (p) => p.techStack.some((t) => t.toLowerCase().includes(sLower) || sLower.includes(t.toLowerCase())) ||
+             p.description.toLowerCase().includes(sLower)
     );
-    if (missing.length > 0) {
-      actions.push({
-        id: 'act-bridge-jd-gap',
-        title: `Build Evidence for ${targetJD.company || 'Target Role'} Requirements`,
-        description: `Target JD requires: ${missing.slice(0, 2).join(', ')}. Add a project repository or certification proof.`,
-        impact: 'High Impact',
-        effort: 'Deep Work (>1d)',
-        urgency: 'Immediate',
-        pillarTarget: 'Pillar 4: JD & Opportunity Intelligence',
-        targetModule: 'Pillar 4: Opportunity Intelligence',
-        triggeringFinding: `Target role requires ${missing.join(', ')} which is absent from current evidence.`,
-        expectedOutcome: 'Closes critical must-have gap and elevates role fit tier to Strong Match.',
-        rationale: 'Moves role fit from Conditional to Strong tier for competitive opportunities.',
-        isCompleted: false,
-      });
+    const inExp = (profile.experiences || []).some(
+      (e) => e.skillsUsed.some((t) => t.toLowerCase().includes(sLower) || sLower.includes(t.toLowerCase())) ||
+             e.description.toLowerCase().includes(sLower)
+    );
+    return inProj || inExp;
+  };
+
+  // -------------------------------------------------------------
+  // TIER 1: MUST-HAVE MANDATORY REQUIREMENTS (Priority 1)
+  // -------------------------------------------------------------
+  if (targetJD && (targetJD.company || targetJD.title)) {
+    // 1A. Academic Eligibility Cutoff
+    const studentCgpa = profile.education.verifiedCGPA || profile.education.selfReportedCGPA || 0;
+    if (targetJD.cgpaCutoff > 0) {
+      if (studentCgpa === 0) {
+        actions.push({
+          id: 'p1-cutoff-unknown',
+          title: `Verify Academic Cutoff for ${targetJD.company || 'Target Role'}`,
+          description: `The role strictly requires a minimum CGPA of ${targetJD.cgpaCutoff}. Your academic record has no confirmed CGPA.`,
+          impact: 'High Impact',
+          effort: 'Quick Win (<15m)',
+          urgency: 'Immediate',
+          priorityTier: 'Priority 1 — Must-Have',
+          requirementAddressed: `Mandatory CGPA Cutoff (>= ${targetJD.cgpaCutoff})`,
+          currentEvidenceStatus: 'Unknown / Unverified: No CGPA confirmed in Profile',
+          recommendedAction: 'Confirm your CGPA or marks in Profile & Academics to clear the campus screening rule.',
+          gapCategory: 'Eligibility Gap',
+          pillarTarget: 'Pillar 1: Profile & Academics',
+          targetModule: 'Pillar 1: Profile & Academics',
+          rationale: 'Mandatory campus eligibility criteria filter candidates before human resume review.',
+          expectedOutcome: 'Confirms eligibility status and unblocks application progression.',
+          isCompleted: false,
+        });
+      } else if (studentCgpa < targetJD.cgpaCutoff) {
+        actions.push({
+          id: 'p1-cutoff-gap',
+          title: `Address CGPA Cutoff Threshold for ${targetJD.company || 'Target Role'}`,
+          description: `Mandatory cutoff is ${targetJD.cgpaCutoff}, while your verified academic record reflects ${studentCgpa.toFixed(2)}.`,
+          impact: 'High Impact',
+          effort: 'Deep Work (>1d)',
+          urgency: 'Immediate',
+          priorityTier: 'Priority 1 — Must-Have',
+          requirementAddressed: `Mandatory Academic Cutoff (>= ${targetJD.cgpaCutoff})`,
+          currentEvidenceStatus: `Unmet: Current ${studentCgpa.toFixed(2)} is below threshold ${targetJD.cgpaCutoff}`,
+          recommendedAction: 'Consult placement team for backlog policies or target roles aligned with your score bracket.',
+          gapCategory: 'Eligibility Gap',
+          pillarTarget: 'Pillar 1: Profile & Academics',
+          targetModule: 'Pillar 1: Profile & Academics',
+          rationale: 'Company recruitment portal will auto-reject if cutoff is unyielding.',
+          expectedOutcome: 'Identifies waiver eligibility or redirects focus to high-fit roles.',
+          isCompleted: false,
+        });
+      }
     }
+
+    // 1B. Must-Have Mandatory Skills
+    const mustHaves = targetJD.mustHaveSkills || [];
+    mustHaves.forEach((skill, idx) => {
+      const sLower = skill.toLowerCase();
+      const isRegistered = registeredSkillNames.some((rs) => rs.includes(sLower) || sLower.includes(rs));
+      const inCV = resumeTextLower.includes(sLower);
+      const inPortfolio = skillInPortfolio(skill);
+
+      if (isRegistered || inPortfolio) {
+        if (!inCV && profile.resumeText) {
+          // CV PRESENTATION GAP: Skill already exists in profile/portfolio but missing from CV document!
+          actions.push({
+            id: `p1-pres-gap-${idx}`,
+            title: `Add Verified "${skill}" to Resume Document`,
+            description: `You have practical evidence for ${skill} in your profile/portfolio, but it is omitted from your CV text!`,
+            impact: 'High Impact',
+            effort: 'Quick Win (<15m)',
+            urgency: 'Immediate',
+            priorityTier: 'Priority 1 — Must-Have',
+            requirementAddressed: `Mandatory Skill: ${skill}`,
+            currentEvidenceStatus: 'Demonstrated in profile/projects, but absent in CV document text',
+            recommendedAction: `Update your CV bullets to explicitly mention ${skill} with outcomes from your project portfolio.`,
+            gapCategory: 'CV Presentation Gap',
+            pillarTarget: 'Pillar 3: CV & Job Match Intelligence',
+            targetModule: 'Pillar 3: CV & Job Match Intelligence',
+            rationale: 'Do not spend time re-learning a skill you already possess; fix the presentation visibility on your resume immediately.',
+            expectedOutcome: `Instantly satisfies ATS keyword parsing for mandatory requirement ${skill}.`,
+            isCompleted: false,
+          });
+        }
+      } else {
+        // GENUINE SKILL GAP: Neither in profile nor in portfolio
+        actions.push({
+          id: `p1-skill-gap-${idx}`,
+          title: `Acquire Mandatory Competency: ${skill}`,
+          description: `${targetJD.company || 'The recruiter'} marks "${skill}" as a compulsory requirement for ${targetJD.title}.`,
+          impact: 'High Impact',
+          effort: 'Deep Work (>1d)',
+          urgency: 'Immediate',
+          priorityTier: 'Priority 1 — Must-Have',
+          requirementAddressed: `Mandatory Skill: ${skill}`,
+          currentEvidenceStatus: 'Unmet: Absent from profile, CV, and verified projects',
+          recommendedAction: `Build a dedicated practical project demonstrating ${skill} and push the repository to GitHub.`,
+          gapCategory: 'Genuine Skill Gap',
+          pillarTarget: 'Pillar 2: Career & Skills',
+          targetModule: 'Pillar 2: Career & Skills',
+          rationale: 'Mandatory technical screens test this directly in coding rounds.',
+          expectedOutcome: `Closes primary disqualification factor for ${targetJD.title}.`,
+          isCompleted: false,
+        });
+      }
+    });
+
+    // -------------------------------------------------------------
+    // TIER 2: DESIRABLE / PREFERRED REQUIREMENTS (Priority 2)
+    // -------------------------------------------------------------
+    const preferredSkills = targetJD.preferredSkills || [];
+    preferredSkills.forEach((skill, idx) => {
+      const sLower = skill.toLowerCase();
+      const isRegistered = registeredSkillNames.some((rs) => rs.includes(sLower) || sLower.includes(rs));
+      const inCV = resumeTextLower.includes(sLower);
+      const inPortfolio = skillInPortfolio(skill);
+
+      if (!isRegistered && !inPortfolio && !inCV) {
+        actions.push({
+          id: `p2-pref-gap-${idx}`,
+          title: `Gain Advantage with Desirable Skill: ${skill}`,
+          description: `Listed as preferred/advantageous in the job specification. Candidates with ${skill} rank higher in shortlist.`,
+          impact: 'Medium Impact',
+          effort: 'Moderate (1-2h)',
+          urgency: 'This Week',
+          priorityTier: 'Priority 2 — Desirable',
+          requirementAddressed: `Preferred Skill: ${skill}`,
+          currentEvidenceStatus: 'Unmet: Not currently documented in profile',
+          recommendedAction: `Complete a targeted tutorial, mini-implementation, or certification covering ${skill}.`,
+          gapCategory: 'Genuine Skill Gap',
+          pillarTarget: 'Pillar 2: Career & Skills',
+          targetModule: 'Pillar 2: Career & Skills',
+          rationale: 'Differentiates your candidature against other eligible peers.',
+          expectedOutcome: `Elevates match tier and overall role fit percentage.`,
+          isCompleted: false,
+        });
+      } else if ((isRegistered || inPortfolio) && !inCV && profile.resumeText) {
+        actions.push({
+          id: `p2-pres-gap-${idx}`,
+          title: `Highlight Desirable Skill "${skill}" on CV`,
+          description: `You have competence in ${skill}, but it is not prominently highlighted on your resume.`,
+          impact: 'Medium Impact',
+          effort: 'Quick Win (<15m)',
+          urgency: 'This Week',
+          priorityTier: 'Priority 2 — Desirable',
+          requirementAddressed: `Preferred Skill: ${skill}`,
+          currentEvidenceStatus: 'Demonstrated in profile, omitted on CV',
+          recommendedAction: `Mention ${skill} in technical skills section or project bullet points on your CV.`,
+          gapCategory: 'CV Presentation Gap',
+          pillarTarget: 'Pillar 3: CV & Job Match Intelligence',
+          targetModule: 'Pillar 3: CV & Job Match Intelligence',
+          rationale: 'Ensures the recruiter sees your competitive advantage at first glance.',
+          expectedOutcome: `Improves desirable skill coverage on ATS scan.`,
+          isCompleted: false,
+        });
+      }
+    });
+
+    // -------------------------------------------------------------
+    // TIER 3: GOOD-TO-HAVE REQUIREMENTS (Priority 3)
+    // -------------------------------------------------------------
+    const goodToHaves = targetJD.goodToHaveSkills || [];
+    goodToHaves.forEach((skill, idx) => {
+      const sLower = skill.toLowerCase();
+      const isRegistered = registeredSkillNames.some((rs) => rs.includes(sLower) || sLower.includes(rs));
+      if (!isRegistered) {
+        actions.push({
+          id: `p3-good-gap-${idx}`,
+          title: `Explore Supplementary Skill: ${skill}`,
+          description: `Optional bonus skill mentioned in the role domain. Not required, but enhances conversational depth in interviews.`,
+          impact: 'Foundational',
+          effort: 'Moderate (1-2h)',
+          urgency: 'Ongoing',
+          priorityTier: 'Priority 3 — Good-to-Have',
+          requirementAddressed: `Good-to-Have: ${skill}`,
+          currentEvidenceStatus: 'Optional: Not currently registered',
+          recommendedAction: `Review foundational concepts of ${skill} for bonus discussion points.`,
+          gapCategory: 'Genuine Skill Gap',
+          pillarTarget: 'Pillar 2: Career & Skills',
+          targetModule: 'Pillar 2: Career & Skills',
+          rationale: 'Demonstrates curiosity and breadth without being a gatekeeping factor.',
+          expectedOutcome: `Strengthens discussion during open-ended interview dialogues.`,
+          isCompleted: false,
+        });
+      }
+    });
   }
 
-  // Project evidence enhancement
+  // -------------------------------------------------------------
+  // FOUNDATIONAL PROFILE & EVIDENCE ENHANCEMENT ACTIONS
+  // -------------------------------------------------------------
+  // Academics setup
+  if (!profile.education.institution || (profile.education.selfReportedCGPA === 0 && (!profile.education.terms || profile.education.terms.length === 0))) {
+    actions.unshift({
+      id: 'act-setup-academics',
+      title: 'Record Academic Credentials (Class 10, 12, Graduation)',
+      description: 'Document your formal secondary, senior secondary, and undergraduate milestones to establish deterministic eligibility cutoffs.',
+      impact: 'High Impact',
+      effort: 'Quick Win (<15m)',
+      urgency: 'Immediate',
+      priorityTier: 'Priority 1 — Must-Have',
+      requirementAddressed: 'Academic Provenance & Eligibility Baseline',
+      currentEvidenceStatus: 'Incomplete academic credentials',
+      recommendedAction: 'Fill in Class 10, 12, and UG degree details in Profile & Academics.',
+      gapCategory: 'Foundational Setup',
+      pillarTarget: 'Pillar 1: Profile & Academics',
+      targetModule: 'Pillar 1: Profile & Academics',
+      triggeringFinding: 'Missing academic milestones prevent campus eligibility verification.',
+      expectedOutcome: 'Unlocks automated campus threshold evaluation and academic provenance.',
+      rationale: 'Campus recruitment audits require verified multi-tier academic history.',
+      isCompleted: false,
+    });
+  }
+
+  // Project portfolio
   if (profile.projects.length < 2) {
     actions.push({
       id: 'act-add-project',
-      title: 'Document a Practical Software Project with Repository Link',
-      description: 'Showcase an end-to-end full-stack or systems project with architecture overview, tech stack, and GitHub repository.',
+      title: 'Showcase Verifiable Project with GitHub Repository',
+      description: 'Document an end-to-end software or systems project with architecture overview, tech stack, and public GitHub repository link.',
       impact: 'High Impact',
       effort: 'Deep Work (>1d)',
       urgency: 'This Week',
-      pillarTarget: 'Pillar 3: Career & Profile Intelligence',
-      targetModule: 'Pillar 3: Career & Profile Intelligence',
-      triggeringFinding: 'Fewer than 2 practical projects recorded in student portfolio.',
+      priorityTier: 'Priority 2 — Desirable',
+      requirementAddressed: 'Verifiable Practical Implementation Proof',
+      currentEvidenceStatus: `${profile.projects.length} project(s) registered (recommended: at least 2)`,
+      recommendedAction: 'Add a repository link and quantify the impact (e.g. latency, requests/sec, user volume).',
+      gapCategory: 'Evidence Gap',
+      pillarTarget: 'Pillar 2: Career & Skills',
+      targetModule: 'Pillar 2: Career & Skills',
+      triggeringFinding: 'Portfolio contains fewer than 2 verifiable practical projects.',
       expectedOutcome: 'Elevates demonstrated skill depth from Level 1 (Stated) to Level 2 (Applied).',
-      rationale: 'Technical recruiters prioritize candidates with verifiable proof of work and public source code.',
+      rationale: 'Technical hiring managers prioritize candidates with inspectable source code.',
       isCompleted: false,
     });
   }
 
-  // Interview practice
+  // Interview preparation
   if (readiness.interviewReadiness === null || readiness.interviewReadiness < 75) {
     actions.push({
       id: 'act-practice-behavioral',
-      title: 'Complete 2 STAR Method Practice Sessions',
-      description: 'Practice behavioral and situational interview questions using the STAR framework to raise your Interview Readiness score.',
+      title: 'Practice STAR Method Behavioral & Technical Drills',
+      description: 'Complete structured interview practice using the STAR rubric in Practice Coach to build interview delivery agility.',
       impact: 'Medium Impact',
       effort: 'Moderate (1-2h)',
       urgency: 'This Week',
-      pillarTarget: 'Pillar 8: Practice Coach',
-      targetModule: 'Pillar 8: Practice Coach',
-      triggeringFinding: 'Insufficient mock practice responses recorded in preparation intel.',
-      expectedOutcome: 'Improves answer structure, clarity score, and interview confidence.',
-      rationale: 'Solidifies narrative delivery and elevates interview readiness beyond 80%.',
+      priorityTier: 'Priority 2 — Desirable',
+      requirementAddressed: 'Interview Delivery Agility & Communication',
+      currentEvidenceStatus: 'Insufficient practice drill evaluations recorded',
+      recommendedAction: 'Complete at least 2 practice drills in Practice Coach.',
+      gapCategory: 'Evidence Gap',
+      pillarTarget: 'Pillar 6: Practice Coach',
+      targetModule: 'Pillar 6: Practice Coach',
+      triggeringFinding: 'Limited mock practice evaluations recorded.',
+      expectedOutcome: 'Raises interview readiness and solidifies structured response delivery.',
+      rationale: 'Translates technical capability into convincing conversational articulation.',
       isCompleted: false,
     });
   }
 
-  // CV Optimization
-  actions.push({
-    id: 'act-cv-quantify',
-    title: 'Quantify Impact Metrics in Resume Bullets',
-    description: 'Transform descriptive duty statements into measurable achievements (e.g. latency reduced by 38%, handled 8,500 req/sec).',
-    impact: 'High Impact',
-    effort: 'Quick Win (<15m)',
-    urgency: 'This Week',
-    pillarTarget: 'Pillar 5: CV Intelligence',
-    targetModule: 'Pillar 5: CV Intelligence',
-    triggeringFinding: 'Several experience and project bullets lack quantifiable outcomes.',
-    expectedOutcome: 'Increases recruiter engagement and elevates ATS content quality score.',
-    rationale: 'Quantified impact demonstrates business awareness and technical ownership.',
-    isCompleted: false,
-  });
-
-  // LinkedIn Positioning
+  // LinkedIn positioning
   if (!profile.linkedInUrl) {
     actions.push({
       id: 'act-linkedin-url',
-      title: 'Link Your LinkedIn Profile URL',
-      description: 'Add your LinkedIn public profile link in Profile or LinkedIn Intelligence to evaluate discoverability.',
+      title: 'Connect LinkedIn Profile URL or Upload Export',
+      description: 'Add your LinkedIn public profile link or upload profile export to inspect recruiter visibility and headline alignment.',
       impact: 'Medium Impact',
       effort: 'Quick Win (<15m)',
-      urgency: 'Immediate',
-      pillarTarget: 'Pillar 6: LinkedIn Intelligence',
-      targetModule: 'Pillar 6: LinkedIn Intelligence',
-      triggeringFinding: 'LinkedIn profile is not linked to your student intelligence record.',
+      urgency: 'This Week',
+      priorityTier: 'Priority 3 — Good-to-Have',
+      requirementAddressed: 'Professional Recruiter Discoverability',
+      currentEvidenceStatus: 'No LinkedIn URL or export linked',
+      recommendedAction: 'Paste your LinkedIn profile URL or upload your exported profile in LinkedIn Intelligence.',
+      gapCategory: 'LinkedIn Gap',
+      pillarTarget: 'Pillar 4: LinkedIn Intelligence',
+      targetModule: 'Pillar 4: LinkedIn Intelligence',
+      triggeringFinding: 'LinkedIn profile is not linked to candidate profile.',
       expectedOutcome: 'Unlocks recruiter visibility audit and headline positioning insights.',
-      rationale: 'Recruiters rely on LinkedIn for inbound outreach and candidate verification.',
-      isCompleted: false,
-    });
-  } else {
-    actions.push({
-      id: 'act-linkedin-headline',
-      title: 'Align LinkedIn Headline with Target Role',
-      description: 'Update headline from generic student status to target role keywords and verified competencies.',
-      impact: 'Medium Impact',
-      effort: 'Quick Win (<15m)',
-      urgency: 'Ongoing',
-      pillarTarget: 'Pillar 6: LinkedIn Intelligence',
-      targetModule: 'Pillar 6: LinkedIn Intelligence',
-      triggeringFinding: 'Headline can be optimized for technical search algorithms.',
-      expectedOutcome: 'Increases recruiter search discoverability by up to 3.4x.',
-      rationale: 'Recruiter searches prioritize matching target role keywords and core technologies.',
+      rationale: 'Inbound recruiter discovery depends on keywords in headline and about section.',
       isCompleted: false,
     });
   }
 
-  return actions;
+  // Ensure deterministic sort: Priority 1 first, then Priority 2, then Priority 3
+  const tierWeight = {
+    'Priority 1 — Must-Have': 1,
+    'Priority 2 — Desirable': 2,
+    'Priority 3 — Good-to-Have': 3,
+  };
+
+  return actions.sort((a, b) => {
+    const wa = a.priorityTier ? tierWeight[a.priorityTier] : 4;
+    const wb = b.priorityTier ? tierWeight[b.priorityTier] : 4;
+    return wa - wb;
+  });
 }

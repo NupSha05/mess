@@ -315,11 +315,17 @@ export interface CVAnalysis {
 
 export interface LinkedInAnalysis {
   completenessScore: number;
+  isExportUploaded?: boolean;
+  exportFileName?: string;
+  sourceType?: 'export_document' | 'profile_metadata' | 'url_only';
   headlineAudit: { current: string; suggested: string; rationale: string };
   aboutSummaryAudit: { current: string; suggested: string; rationale: string };
   visibilityGaps: Array<{ skill: string; reason: string; action: string }>;
   genuineSkillGaps: Array<{ skill: string; reason: string; action: string }>;
   sectionChecklist: Array<{ section: string; status: 'Optimized' | 'Needs Attention' | 'Missing'; note: string }>;
+  experienceAnalysis?: Array<{ role: string; company: string; findings: string; recommendations: string }>;
+  educationConsistency?: { cvMatchStatus: 'Consistent' | 'Discrepancy' | 'Not Enough Data'; notes: string };
+  prioritizedRecommendations?: string[];
   lastAnalyzed: string;
 }
 
@@ -437,6 +443,11 @@ export interface NextBestAction {
   triggeringFinding?: string;
   targetModule?: string;
   expectedOutcome?: string;
+  priorityTier?: 'Priority 1 — Must-Have' | 'Priority 2 — Desirable' | 'Priority 3 — Good-to-Have';
+  requirementAddressed?: string;
+  currentEvidenceStatus?: string;
+  recommendedAction?: string;
+  gapCategory?: 'CV Presentation Gap' | 'Genuine Skill Gap' | 'Evidence Gap' | 'Eligibility Gap' | 'LinkedIn Gap' | 'Foundational Setup';
 }
 
 export interface EventImpactRecord {

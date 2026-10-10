@@ -114,7 +114,7 @@ export const Pillar9Readiness: React.FC = () => {
             </div>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-800/80 pt-2">
-            {profile.skills.length > 0
+            {(profile.skills?.length || 0) > 0
               ? `${profile.skills.length} technical competencies documented with Level 0-4 proof.`
               : 'No skills registered in profile.'}
           </p>
@@ -330,9 +330,9 @@ export const Pillar9Readiness: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-2.5">
-            {eventImpactLog.slice(0, 5).map((log) => (
+            {eventImpactLog.slice(0, 5).map((log, i) => (
               <div
-                key={log.id}
+                key={`${log.id || 'log'}-${i}`}
                 className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
               >
                 <div className="space-y-1">

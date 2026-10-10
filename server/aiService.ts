@@ -128,7 +128,7 @@ ${historyText}`,
           ragFrameworkApplied: taskType,
         };
       } catch (err: any) {
-        console.error('AIService askCareerSaathi call failed:', err);
+        console.warn('AIService askCareerSaathi note (using rule fallback):', err?.message || err);
       }
     }
 
@@ -193,8 +193,8 @@ Return ONLY pure JSON. No markdown backticks, no preamble.`,
 
         const raw = (response.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(raw);
-      } catch (err) {
-        console.error('AIService parseJobDescription failed:', err);
+      } catch (err: any) {
+        console.warn('AIService parseJobDescription notice (using deterministic parser fallback):', err?.message || err);
       }
     }
 
@@ -274,8 +274,8 @@ Return ONLY pure JSON. No markdown formatting.`,
 
         const raw = (response.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(raw);
-      } catch (err) {
-        console.error('AIService evaluatePracticeAnswer failed:', err);
+      } catch (err: any) {
+        console.warn('AIService evaluatePracticeAnswer note (using rubric fallback):', err?.message || err);
       }
     }
 
@@ -326,6 +326,7 @@ Return ONLY pure JSON. No markdown formatting.`,
 
     if (aiClient) {
       try {
+        const boundedCvText = (cvText || '').slice(0, 10000);
         const prompt = buildControlledPrompt(
           `Analyze the student's CV text in relation to their verified profile and target opportunity.
 CRITICAL: Maintain the Three-Way Gap Taxonomy:
@@ -362,7 +363,7 @@ Output valid JSON:
 Return ONLY pure JSON.`,
           ragFramework,
           { studentProfile: profile, activeJD },
-          cvText
+          boundedCvText
         );
 
         const response = await aiClient.models.generateContent({
@@ -372,8 +373,8 @@ Return ONLY pure JSON.`,
 
         const raw = (response.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(raw);
-      } catch (err) {
-        console.error('AIService analyzeCV failed:', err);
+      } catch (err: any) {
+        console.warn('AIService analyzeCV notice (using deterministic fallback engine):', err?.message || err);
       }
     }
 
@@ -454,8 +455,8 @@ Return ONLY pure JSON.`,
 
         const raw = (response.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(raw);
-      } catch (err) {
-        console.error('AIService analyzeLinkedIn failed:', err);
+      } catch (err: any) {
+        console.warn('AIService analyzeLinkedIn note (using deterministic audit fallback):', err?.message || err);
       }
     }
 
@@ -511,7 +512,7 @@ Return ONLY pure JSON.`,
     if (!aiClient) return null;
     try {
       const response = await aiClient.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           {
             inlineData: {
@@ -526,7 +527,7 @@ Return ONLY pure JSON.`,
       });
       return response.text ? response.text.trim() : null;
     } catch (err: any) {
-      console.warn('AIService document text extraction note:', err.message);
+      console.warn('AIService document text extraction note (using scraper fallback):', err?.message || err);
       return null;
     }
   },
